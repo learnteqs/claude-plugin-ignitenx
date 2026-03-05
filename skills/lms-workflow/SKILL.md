@@ -2,6 +2,8 @@
 
 This skill describes the standard L&D workflows for processing training requests, SOPs, and instructor-led training using igniteNX.
 
+> **Important**: Training = ILT (Instructor-Led Training). They are the same concept. Use the `/trainings` API to manage ILT programs — this internally creates an item with `type=8`.
+
 ## Authentication (run once per session)
 
 Before using any API calls, authenticate and set up variables. Only `IGNITENX_API_KEY` is required as an environment variable.
@@ -21,6 +23,8 @@ All subsequent API calls require both headers:
 ```bash
 -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
 ```
+
+The `X-User-ID` header is **not needed** — middleware extracts it from the Bearer token automatically.
 
 ## End-to-End Content Workflow
 
@@ -56,7 +60,7 @@ All subsequent API calls require both headers:
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID" \
     -F "file=@./document.pdf" \
-    -F "title=Title Here" \
+    -F "name=Title Here" \
     -F "category=Category" \
     -F "description=Description here" \
     -F "tags=tag1" \
@@ -143,6 +147,8 @@ All subsequent API calls require both headers:
 
 ## Instructor-Led Training (ILT) Workflow
 
+Training = ILT. The full workflow: Create Training -> Schedule Event with Sessions -> Enroll Users -> Track Attendance.
+
 ### 1. Create Training Type (if needed)
 Check existing training types first:
 ```bash
@@ -151,7 +157,7 @@ curl -s "$BASE_URL/api/app/$TENANT/trainingtypes?skip=0&limit=20" \
   -H "X-Role-ID: $ROLE_ID"
 ```
 
-### 2. Create Training
+### 2. Create Training (ILT)
 ```bash
 curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
   -H "Content-Type: application/json" \
@@ -161,13 +167,20 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
     "name": "Fire Safety Training",
     "description": "Annual fire safety certification",
     "trainingCode": "FST-2026",
+    "objectives": "Understand fire prevention, evacuation procedures, and extinguisher use",
+    "effectiveMethodology": "Classroom lecture with hands-on fire drill",
     "trainingMode": 1,
     "enrollmentType": 0,
     "accessType": 1,
     "trainingCompletionCriteria": 0,
-    "mandatory": true
+    "trainingLibraryCriteria": 0,
+    "completionPercentage": 100,
+    "mandatory": true,
+    "allowSelfEnrolWithAttendance": true
   }'
 ```
+
+**Required fields**: `name`, `trainingCode`, `objectives`, `effectiveMethodology`, `trainingMode`, `enrollmentType`, `accessType`, `trainingCompletionCriteria`, `trainingLibraryCriteria`, `completionPercentage`
 
 ### 3. Create Event with Sessions
 ```bash
@@ -181,16 +194,26 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/events" \
       "date": "2026-03-15T09:00:00Z",
       "endDate": "2026-03-15T17:00:00Z",
       "trainingId": "<training-id>",
+      "status": 0,
       "scheduleType": 0,
-      "maximumParticipants": 30
+      "maximumParticipants": 30,
+      "walkInEnabled": true
     },
     "sessions": [{
       "name": "Session 1",
       "startTime": "2026-03-15T09:00:00Z",
-      "endTime": "2026-03-15T17:00:00Z"
+      "endTime": "2026-03-15T17:00:00Z",
+      "duration": 480,
+      "status": 0,
+      "hostLink": "https://meet.example.com/host/abc",
+      "joinLink": "https://meet.example.com/join/abc"
     }]
   }'
 ```
+
+**Event required fields**: `name`, `date`, `trainingId`, `status`, `scheduleType`
+**Session required fields**: `name`, `startTime`, `endTime`, `duration`, `status`
+**Session optional fields**: `hostLink`, `joinLink` (only needed for online/virtual sessions — offline/classroom sessions don't need meeting links)
 
 ### 4. Enroll Users
 ```bash
@@ -234,7 +257,7 @@ curl -s "$BASE_URL/api/app/$TENANT/trainingHoursAndAveragePerEmployee?trainingId
 ## Notification & Reminder Workflow
 
 ### Sending Notifications (immediate)
-Use the notifications service to send notifications now:
+Use the notifications service to send notifications now. No `X-User-ID` header needed — extracted from Bearer token.
 
 ```bash
 # For a rollout (course reminder)
