@@ -1,0 +1,24 @@
+{
+  "name": "ignitenx-plugins",
+  "owner": {
+    "name": "Learnteq Solutions"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for the igniteNX Learning Management System",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ignitenx-lms",
+      "source": ".",
+      "description": "L&D workflow automation for the igniteNX LMS — intake training requests, create SOPs, publish content, assign learners, and track completion.",
+      "version": "1.0.2",
+      "author": {
+        "name": "Learnteq Solutions"
+      },
+      "homepage": "https://ignitenx.com",
+      "category": "productivity",
+      "tags": ["lms", "learning", "sop", "training", "l&d"]
+    }
+  ]
+}
