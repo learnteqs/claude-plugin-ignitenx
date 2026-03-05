@@ -1,0 +1,8 @@
+{
+  "name": "ignitenx-lms-v01",
+  "version": "1.0.2",
+  "description": "L&D automation plugin for igniteNX LMS",
+  "author": "Learnteq Solutions",
+  "homepage": "https://ignitenx.com",
+  "tags": ["lms", "learning", "sop", "training", "l&d"]
+}
