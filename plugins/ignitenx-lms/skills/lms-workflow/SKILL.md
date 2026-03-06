@@ -340,6 +340,55 @@ curl -s -X PUT "$BASE_URL/api/app/$TENANT/reminders/<reminder-id>" \
 
 ---
 
+## Notification Inbox Workflow
+
+The sections above cover **sending** notifications. This section covers the **receiving** side — checking and managing in-app notifications.
+
+> **Important**: All inbox endpoints use `/api/notifications/$TENANT/` (NOT `/api/app/$TENANT/`).
+
+### 1. Check Unread Notification Count
+```bash
+UNREAD=$(curl -s "$BASE_URL/api/notifications/$TENANT/userunreadcount" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID")
+echo "$UNREAD" | jq '.count'
+```
+Returns count plus up to 3 most recent unread notifications as a preview.
+
+### 2. Read Full Notification Inbox
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/usernotifications?limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Use `q` parameter to search by subject: `?q=safety+training`.
+
+### 3. Mark Individual Notification as Read
+```bash
+curl -s -X PUT "$BASE_URL/api/notifications/$TENANT/notification/<notification-id>/read" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+
+### 4. Mark All Notifications as Read
+```bash
+curl -s -X PUT "$BASE_URL/api/notifications/$TENANT/mark-all-as-read" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+
+### 5. View Notification Logs (Admin)
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/logs?limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Supports filters: `senderName`, `userName`, `subject`, `notificationName`, `status` (pending/scheduled/succeeded/failed), `type` (email/push/sms/desktop), `createdAt` (YYYY-MM-DD or range).
+
+Count logs: `GET /api/notifications/$TENANT/logs/count` (same filters).
+
+---
+
 ## Dashboard Monitoring
 
 ### Assignment Overview
@@ -398,6 +447,104 @@ curl -s "$BASE_URL/api/app/$TENANT/downloadreport/<report-table>" \
 
 ---
 
+## Approval Workflow
+
+Multi-step approval processes can be configured for content enrollment, deadline extensions, additional assessment attempts, event nominations, and participant cancellations.
+
+### 1. Configure Approval Process (one-time setup)
+
+List available roles for approval steps:
+```bash
+ROLES=$(curl -s "$BASE_URL/api/app/$TENANT/approvalroles" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID")
+echo "$ROLES" | jq '.roles'
+```
+
+Create an approval process with the desired step sequence:
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/approvalprocesses" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"name": "Manager + HR Approval", "steps": ["<role-id-1>", "<role-id-2>"], "default": false}'
+```
+
+Map the process to approval types:
+```bash
+curl -s -X PUT "$BASE_URL/api/app/$TENANT/approvaltypesbulk" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '[
+    {"approvalTypeId": 0, "approvalProcessId": "<process-id>"},
+    {"approvalTypeId": 3, "approvalProcessId": "<process-id>"}
+  ]'
+```
+
+Type IDs: `0` = Item enrollment, `1` = Deadline extension, `2` = Additional attempts, `3` = Event nomination, `13` = Participant cancellation. Set `approvalProcessId` to `null` to disable.
+
+### 2. Enrollment Triggers Approval
+
+When `approvalRequired: true` is set on a training or content item, enrollment via `/items/:id/enroll` or `/events/:id/enroll` automatically creates an approval request. The response includes `"requiresApproval": true`. Returns 409 if a pending request already exists.
+
+### 3. Check Pending Approvals (Approver)
+```bash
+PENDING=$(curl -s "$BASE_URL/api/app/$TENANT/approvalinstances/pending?limit=10&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID")
+echo "$PENDING" | jq '.pending_approvals'
+```
+Present each pending item with: request name, type, requestor name, current step, date submitted.
+
+### 4. Approve or Reject
+```bash
+curl -s -X PUT "$BASE_URL/api/app/$TENANT/approvalinstances/<instance-id>" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"status": 1, "approverRemarks": "Approved, proceed.", "approverInputs": 0}'
+```
+Status: `1` = Approved, `2` = Rejected. `approverRemarks` is **required**. Returns 409 if already handled.
+
+### 5. Check Request Status (Requestor)
+```bash
+MY_REQUESTS=$(curl -s "$BASE_URL/api/app/$TENANT/approvalrequests?mine=true&limit=100&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID")
+echo "$MY_REQUESTS" | jq '.approval_requests[] | {name, status, currentStepName}'
+```
+Status: `0` = Pending, `1` = Approved, `2` = Rejected. Each request includes a `steps` array showing the timeline of all approval steps.
+
+### 6. Request Deadline Extension
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/itemusers/<item-user-id>/extend" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"itemId": "<content-id>", "requestorRemarks": "Need 7 more days to complete", "requestorInput": 7}'
+```
+Creates an approval request routed through the configured process for type `1` (ItemDays).
+
+### 7. Request Additional Assessment Attempts
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/attempts/request" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{
+    "itemUserId": "<item-user-id>",
+    "childItemUserId": "<child-item-user-id>",
+    "itemId": "<assessment-id>",
+    "requestorRemarks": "Need one more attempt",
+    "requestorInput": 1,
+    "assessmentType": 2
+  }'
+```
+Creates an approval request routed through the configured process for type `2` (AdditionalAttempts). `assessmentType`: `0` = Assessment, `1` = Pre, `2` = Post, `3` = PreEvent, `4` = PostEvent.
+
+---
+
 ## Content Categorization Taxonomy
 
 | Category | Use For |
@@ -421,7 +568,10 @@ curl -s "$BASE_URL/api/app/$TENANT/downloadreport/<report-table>" \
 
 ## Approval Gates
 
-1. **Content Review**: SME validates technical accuracy
+1. **Content Review**: SME validates technical accuracy (handled outside the system or via manual approval process)
 2. **L&D Review**: L&D team reviews pedagogy and formatting
 3. **Compliance Review**: (if applicable) Legal/compliance sign-off
-4. **Publication Approval**: Final go-ahead to publish and rollout
+4. **Enrollment Approval**: When `approvalRequired` is set on content or events, enrollment triggers a multi-step approval process. Configure via `approvalprocesses` and `approvaltypes` APIs (see Approval Workflow section above).
+5. **Publication Approval**: Final go-ahead to publish and rollout
+
+> Multi-step approval workflows are configured via Settings > Approvals in the dashboard. The API is documented in the Approval Flow section of the API reference (`ignitenx-api` skill).

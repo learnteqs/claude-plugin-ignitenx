@@ -89,7 +89,7 @@ Prompt to Claude:
 - "Publish `C:\Training\SOPs\Forklift-Battery-Charging-v1.pdf` as 'Forklift Battery Charging SOP', category 'Safety'."
 
 Expected outcome:
-- Upload to igniteNX via curl multipart form.
+- Upload to igniteNX via the 3-step SAS URL flow.
 - Returned content ID confirmed and ready for rollout.
 
 ### 4) Assign content to learners: `/lms:assign`
@@ -120,6 +120,34 @@ Prompt to Claude:
 Expected outcome:
 - Completion %, overdue users/items, and suggested follow-up actions (reminders, deadline changes, escalation).
 
+### 6) Manage approvals: `/lms:approvals`
+
+Example:
+```
+/lms:approvals
+```
+
+Prompt to Claude:
+- "Check my pending approvals and approve the deadline extension for the warehouse team."
+
+Expected outcome:
+- Pending approvals listed with requestor details and type.
+- Approval confirmed with remarks recorded.
+
+### 7) Check notification inbox: `/lms:notifications`
+
+Example:
+```
+/lms:notifications
+```
+
+Prompt to Claude:
+- "How many unread notifications do I have? Show me the latest ones."
+
+Expected outcome:
+- Unread count displayed with preview of recent notifications.
+- Option to mark individual or all as read.
+
 ## End-to-End Example Scenario
 
 1. Run `/lms:check-email` for an operations request: "Forklift incidents increased; mandatory refresher needed this month."
@@ -127,4 +155,6 @@ Expected outcome:
 3. Run `/lms:publish` to upload the SOP and capture the returned content ID.
 4. Run `/lms:assign` to create a rollout for the `Warehouse` group with an explicit due date.
 5. Run `/lms:status` after 3-5 days to review completion and overdue counts.
-6. If overdue is high, send reminders and escalate per your `skills/company-context.md` escalation path.
+6. Run `/lms:approvals` to check if any enrollment approvals need handling for the new rollout.
+7. Run `/lms:notifications` to verify notification delivery status and check your inbox.
+8. If overdue is high, send reminders and escalate per your `skills/company-context.md` escalation path.

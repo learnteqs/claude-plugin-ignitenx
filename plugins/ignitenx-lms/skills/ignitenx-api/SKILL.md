@@ -553,6 +553,226 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/sessions/<session-id>/attendance" \
 
 Alternatively, enroll + mark attendance in one step via `sessionusers/bulk` with `"markAttendance": true`.
 
+## Approval Flow
+
+Approval workflows allow configuring multi-step approval processes for content enrollment, deadline extensions, additional assessment attempts, event nominations, and participant cancellations. When an entity has `approvalRequired: true`, user actions (like enrollment) create an approval request routed through the configured process.
+
+### Approval Status Values
+
+| Value | Label |
+|-------|-------|
+| 0 | Pending |
+| 1 | Approved |
+| 2 | Rejected |
+
+### Approval Type Reference
+
+| Type ID | Name | Description |
+|---------|------|-------------|
+| 0 | Item | Content/course enrollment approval |
+| 1 | ItemDays | Deadline extension approval |
+| 2 | AdditionalAttempts | Additional assessment attempts approval |
+| 3 | Event | Training/event nomination approval |
+| 13 | ParticipantCancellation | Participant cancellation approval |
+
+### Pending approvals inbox
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvalinstances/pending?limit=10&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Query params: `limit` (int, default 10), `offset` (int, default 0).
+
+Response: `{"pending_approvals": [...]}`. Each item contains:
+- `steps` — array of approval step objects (`stepName`, `status`, `approverRemarks`, `handledBy`, `handledAt`)
+- `requestorDetails` — requestor display name, email, phone, avatar
+- `requestInfo` — `instanceId`, `requestId`, `requestName`, `type`, `assessmentType`, `processStep`
+
+### Handled approvals history
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvalinstances/history?status=approved&limit=25&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Query params: `limit` (int, default 25), `offset` (int, default 0), `status` (comma-separated: `pending`, `approved`, `rejected`).
+
+Response: `{"handled_approvals": [...]}`.
+
+### Approve or reject
+```bash
+curl -s -X PUT "$BASE_URL/api/app/$TENANT/approvalinstances/<instance-id>" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"status": 1, "approverRemarks": "Approved, proceed.", "approverInputs": 0}'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| status | int | Yes | `1` = Approved, `2` = Rejected |
+| approverRemarks | string | Yes | Remarks from the approver |
+| approverInputs | number | No | Numeric input (e.g., additional days granted). Default `0` |
+
+Returns HTTP 201 with the updated instance. Returns **409 Conflict** if the instance was already handled.
+
+### List approval requests
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvalrequests?mine=true&limit=100&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Query params: `limit` (int, default 10), `offset` (int, default 0), `mine` (`true`/`false` — filter to current user's requests), `status` (`pending`/`approved`/`rejected`), `requestedById` (uuid).
+
+Response: `{"approval_requests": [...]}`. Each request includes:
+- `id`, `name`, `type` (approval type ID), `status` (0/1/2)
+- `currentStepName`, `currentStepRoleName`, `currentStepStatus`
+- `steps` — array of step objects with `instanceId`, `processStep`, `processStepRoleName`, `status`, `approverRemarks`, `approverInputs`, `handledById`, `handledAt`
+- `requestorRemarks`, `createdAt`, `modifiedAt`
+
+### Count approval requests
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/countapprovalrequests" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"total": <number>}`
+
+### Request deadline extension
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/itemusers/<item-user-id>/extend" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"itemId": "<content-id>", "requestorRemarks": "Need 7 more days to complete", "requestorInput": 7}'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| itemId | uuid | Yes | The content item ID |
+| requestorRemarks | string | No | Reason for extension |
+| requestorInput | number | No | Number of additional days requested |
+
+Returns HTTP 201 with the approval request. Returns **409 Conflict** if an extension request already exists.
+
+### Request additional assessment attempts
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/attempts/request" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{
+    "itemUserId": "<item-user-id>",
+    "childItemUserId": "<child-item-user-id>",
+    "eventUserId": "<event-user-id>",
+    "itemId": "<assessment-id>",
+    "requestorRemarks": "Need one more attempt",
+    "requestorInput": 1,
+    "assessmentType": 2,
+    "approvalProcessId": "<approval-process-id>"
+  }'
+```
+
+**assessmentType values**: `0` = Assessment, `1` = PreAssessment, `2` = PostAssessment, `3` = PreEvent, `4` = PostEvent.
+
+Returns HTTP 201 with the approval request. Returns **409 Conflict** if a request already exists.
+
+### Enrollment with approval
+
+When content or events have `approvalRequired: true`, enrollment creates an approval request instead of direct enrollment.
+
+**Content enrollment:**
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/items/<item-id>/enroll" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"rolloutId": "<rollout-id>"}'
+```
+
+**Event enrollment:**
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/events/<event-id>/enroll" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+
+> **Important**: If the item/event has `approvalRequired: true`, the response includes `"requiresApproval": true` and an approval request is created. Returns **409 Conflict** if a pending approval request already exists for this enrollment.
+
+### Approval process configuration (admin)
+
+**List processes:**
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvalprocesses?limit=10&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"approval_processes": [{id, name, steps, default}, ...]}`
+
+**Create process:**
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/approvalprocesses" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"name": "Manager + HR Approval", "steps": ["<role-id-1>", "<role-id-2>"], "default": false}'
+```
+
+**Update process:**
+```bash
+curl -s -X PUT "$BASE_URL/api/app/$TENANT/approvalprocesses/<process-id>" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"name": "Updated Name", "steps": ["<role-id-1>"], "default": true}'
+```
+
+**Delete process:**
+```bash
+curl -s -X DELETE "$BASE_URL/api/app/$TENANT/approvalprocesses/<process-id>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+
+**Lookup processes (for dropdowns):**
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/lookupapprovalprocesses" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"approval_processes": [{id, name}, ...]}`
+
+**List available roles for process steps:**
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvalroles" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"roles": [{id, name}, ...]}`
+
+### Approval type configuration (admin)
+
+Each approval type can be mapped to a specific approval process. Set `approvalProcessId` to `null` to disable approval for that type.
+
+**List types with process mappings:**
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/approvaltypes" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"approval_types": [{id, approvalProcessId}, ...]}`
+
+**Bulk update type-to-process mappings:**
+```bash
+curl -s -X PUT "$BASE_URL/api/app/$TENANT/approvaltypesbulk" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '[
+    {"approvalTypeId": 0, "approvalProcessId": "<process-id>"},
+    {"approvalTypeId": 3, "approvalProcessId": null}
+  ]'
+```
+
 ## Notifications
 
 Send notifications to users in a rollout or session. Uses the notifications service (`/api/notifications/`). The `X-User-ID` is automatically extracted from the Bearer token by middleware — no extra header needed.
@@ -605,6 +825,76 @@ curl -s -X PUT "$BASE_URL/api/app/$TENANT/reminders/<reminder-id>" \
   -H "X-Role-ID: $ROLE_ID" \
   -d '{"active": true}'
 ```
+
+## Notification Inbox
+
+Read and manage in-app notifications. For **sending** notifications, see the Notifications section above. This section covers the **receiving** side — reading notifications, checking unread count, and marking as read.
+
+> **Important**: Notification inbox endpoints use `/api/notifications/$TENANT/` (NOT `/api/app/$TENANT/`). Auth headers remain the same.
+
+### Get unread count and preview
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/userunreadcount" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Response: `{"count": <number>, "data": [...]}` — `data` contains up to 3 most recent unread notifications with `id`, `subject`, `senderName`, `message`, `createdAt`.
+
+### List user notifications
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/usernotifications?limit=20&offset=0&q=safety" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Query params: `limit` (int, default 20), `offset` (int, default 0), `q` (string — search by subject).
+
+Response: `{"count": <total>, "limit": 20, "offset": 0, "data": [...]}`. Each notification includes `senderName`, `senderEmail`, `subject`, `message`, `remarks`, `createdAt`.
+
+### Mark notification as read
+```bash
+curl -s -X PUT "$BASE_URL/api/notifications/$TENANT/notification/<notification-id>/read" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+No request body needed. Response: `{"status": "ok", "updated": <number>}`.
+
+### Mark all notifications as read
+```bash
+curl -s -X PUT "$BASE_URL/api/notifications/$TENANT/mark-all-as-read" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+No request body needed. Response: `{"status": "ok", "updated": <number>, "unreadCount": 0}`.
+
+### Notification logs (admin)
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/logs?limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+
+Filter query params (all optional):
+
+| Param | Description |
+|-------|-------------|
+| `senderName` | Filter by sender name (regex, case-insensitive) |
+| `userName` | Filter by recipient name |
+| `subject` | Filter by subject |
+| `notificationName` | Filter by notification type name |
+| `remarks` | Filter by remarks |
+| `status` | Exact match: `pending`, `scheduled`, `succeeded`, `failed` |
+| `type` | Exact match: `email`, `push`, `sms`, `desktop` |
+| `createdAt` | Date: `YYYY-MM-DD` or range: `YYYY-MM-DD,YYYY-MM-DD` |
+
+Response: `{"limit": 20, "offset": 0, "data": [...]}`. Each log includes `id`, `senderName`, `senderEmail`, `userName`, `userEmail`, `notificationName`, `subject`, `message`, `remarks`, `type`, `status`, `ccEmails`, `createdAt`.
+
+### Count notification logs (admin)
+```bash
+curl -s "$BASE_URL/api/notifications/$TENANT/logs/count" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+Accepts the same filter query params as the logs endpoint. Response: `{"count": <number>}`.
 
 ## Dashboard & Analytics
 
