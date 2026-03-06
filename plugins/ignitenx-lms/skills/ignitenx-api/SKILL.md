@@ -123,30 +123,60 @@ curl -s -X PATCH "$BASE_URL/api/app/$TENANT/items/<content-id>/archive" \
 
 ## Publishing (File Upload)
 
-### Upload and publish new content (multipart form)
-```bash
-curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Role-ID: $ROLE_ID" \
-  -F "file=@./sop.pdf" \
-  -F "name=Safety SOP v2" \
-  -F "category=Safety" \
-  -F "description=Updated safety procedures" \
-  -F "tags=safety" \
-  -F "tags=procedures"
-```
+Content upload uses a **3-step SAS URL flow** (do NOT use multipart form POST to `/items`):
 
-The `type` field is auto-detected from file extension. You can also set it explicitly: `-F "type=1"` for Document.
-
-### Get upload URL (Azure Blob SAS)
+### Step 1: Request SAS upload URL
 ```bash
 curl -s -X POST "$BASE_URL/api/app/$TENANT/upload" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID" \
-  -d '{"fileName": "video.mp4", "contentType": "video/mp4"}'
+  -d '{"fileName": "sop.pdf", "folder": "Document", "id": null}'
 ```
-Returns a SAS URL for direct upload to Azure Blob Storage.
+Returns `{id, url}` where `id` is the new item ID and `url` is the SAS URL for upload.
+
+**folder values** (must match content type):
+
+| Folder | Use For |
+|--------|---------|
+| `Document` | PDF, DOCX, PPTX documents |
+| `Video` | MP4, AVI video files |
+| `Audio` | MP3, WAV audio files |
+| `Announcement` | Announcement attachments |
+| `LibraryItem` | Library content |
+| `FlashCard` | Flashcard images |
+| `thumbnail` | Item thumbnail images |
+
+### Step 2: Upload file to SAS URL
+```bash
+curl -s -X PUT "<returned-sas-url>" \
+  -H "x-ms-blob-type: BlockBlob" \
+  -H "Content-Type: application/pdf" \
+  --data-binary @./sop.pdf
+```
+**No auth headers needed** - the SAS URL is self-authenticating. Returns HTTP 201 on success.
+
+### Step 3: Create item metadata
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{
+    "id": "<id-from-step-1>",
+    "name": "Safety SOP v2",
+    "description": "Updated safety procedures",
+    "type": 1,
+    "sourceType": 1,
+    "fileName": "sop.pdf",
+    "url": "<sas-url-without-query-params>"
+  }'
+```
+
+**Item type values**: `1` = Document, `2` = Video, `3` = URL, `4` = Scorm, `20` = Audio
+**sourceType**: `0` = URL (external link), `1` = Upload (file in Azure Blob)
+
+> **Important**: Strip the SAS query params from the URL before saving. Use only the base path (e.g., `https://app.ignitenx.com/storage/local/Document/{id}/sop.pdf`).
 
 ## Rollout (Assign content to audience)
 

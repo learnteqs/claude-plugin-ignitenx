@@ -54,18 +54,48 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
   6. Revision History
 
 ### 4. Publishing
-- Upload finalized document to igniteNX:
+Upload uses a 3-step SAS URL flow (do NOT use multipart form):
+
+- **Step 1** - Request SAS upload URL:
   ```bash
-  curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+  SAS_RESP=$(curl -s -X POST "$BASE_URL/api/app/$TENANT/upload" \
+    -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID" \
-    -F "file=@./document.pdf" \
-    -F "name=Title Here" \
-    -F "category=Category" \
-    -F "description=Description here" \
-    -F "tags=tag1" \
-    -F "tags=tag2"
+    -d '{"fileName": "document.pdf", "folder": "Document", "id": null}')
+  ITEM_ID=$(echo $SAS_RESP | jq -r '.id')
+  SAS_URL=$(echo $SAS_RESP | jq -r '.url')
   ```
+
+- **Step 2** - Upload file to SAS URL (no auth headers needed):
+  ```bash
+  curl -s -X PUT "$SAS_URL" \
+    -H "x-ms-blob-type: BlockBlob" \
+    -H "Content-Type: application/pdf" \
+    --data-binary @./document.pdf
+  ```
+
+- **Step 3** - Create item metadata:
+  ```bash
+  CLEAN_URL=$(echo "$SAS_URL" | cut -d'?' -f1)
+  curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-Role-ID: $ROLE_ID" \
+    -d "{
+      \"id\": \"$ITEM_ID\",
+      \"name\": \"Title Here\",
+      \"description\": \"Description here\",
+      \"type\": 1,
+      \"sourceType\": 1,
+      \"fileName\": \"document.pdf\",
+      \"url\": \"$CLEAN_URL\"
+    }"
+  ```
+
+  **folder values**: `Document`, `Video`, `Audio`, `Announcement`, `LibraryItem`
+  **type values**: `1`=Document, `2`=Video, `3`=URL, `4`=Scorm, `20`=Audio
+
 - Verify published content:
   ```bash
   curl -s "$BASE_URL/api/app/$TENANT/items?search=Title+Here" \
