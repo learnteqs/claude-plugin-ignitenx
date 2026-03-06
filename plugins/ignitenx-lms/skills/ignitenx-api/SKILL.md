@@ -74,10 +74,11 @@ Additional enums:
 
 ### List content items
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=20&search=<term>&category=<cat>" \
+curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=50" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
+Query params: `skip` (int, default 0), `limit` (int, default 500). No text search on this endpoint.
 
 ### List items by type
 ```bash
@@ -173,7 +174,7 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
   }'
 ```
 
-**Item type values**: `1` = Document, `2` = Video, `3` = URL, `4` = Scorm, `20` = Audio
+**Item type values**: `0` = Url, `1` = Document, `2` = Audio, `3` = Video, `5` = SCORM (see full Item Type Enum table above)
 **sourceType**: `0` = URL (external link), `1` = Upload (file in Azure Blob)
 
 > **Important**: Strip the SAS query params from the URL before saving. Use only the base path (e.g., `https://app.ignitenx.com/storage/local/Document/{id}/sop.pdf`).
@@ -194,14 +195,16 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/rollout" \
     "startDate": "2026-03-04T00:00:00Z",
     "endDate": "2026-04-01T00:00:00Z",
     "noOfDays": 28,
-    "accessType": 4,
-    "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
+    "accessType": 1,
+    "filterList": [{"key": "department", "value": ["<dept-id>"]}],
     "myLearning": true,
     "mandatory": true
   }'
 ```
 
-**accessType values**: `0` = Internal, `1` = Private, `2` = External, `3` = All users, `4` = Criteria-based (uses `queryProperty`).
+**accessType values**: `0` = Private, `1` = Public
+
+**Audience targeting**: Use `filterList` (array of `{key, value}` objects) to target by criteria. Supported keys: `department`, `location`, `grade`, `organisationUnit`. Alternatively, `queryProperty` accepts raw JSON for advanced filtering.
 
 When `myLearning` is `true`, item users are auto-created for all matched users.
 
@@ -243,10 +246,11 @@ curl -s "$BASE_URL/api/app/$TENANT/itemuserUsage/<content-id>" \
 
 ### List employees
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/listusers?skip=0&limit=20&search=<name>&department=<dept>" \
+curl -s "$BASE_URL/api/app/$TENANT/listusers?offset=0&limit=20&name=<name>" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
+Query params: `offset` (default 0), `limit` (default 10), `name`, `userName`, `departmentId` (uuid), `locationId` (uuid), `gradeId` (uuid), `organisationUnitId` (uuid), `active` (bool), `sort`, `order` (ASC/DESC).
 
 ### Get employee details
 ```bash
@@ -259,14 +263,14 @@ curl -s "$BASE_URL/api/app/$TENANT/users/<user-id>" \
 
 ### List groups
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/departments?skip=0&limit=20&search=<term>" \
+curl -s "$BASE_URL/api/app/$TENANT/departments?skip=0&limit=20" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
 
 ### List members of a group
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/listusers?department=<dept-name>&skip=0&limit=20" \
+curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&limit=20" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
@@ -275,7 +279,7 @@ curl -s "$BASE_URL/api/app/$TENANT/listusers?department=<dept-name>&skip=0&limit
 
 ### List categories
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/categories?skip=0&limit=20&search=<term>" \
+curl -s "$BASE_URL/api/app/$TENANT/categories?skip=0&limit=20" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
@@ -286,7 +290,7 @@ Training = ILT (Instructor-Led Training). Use the `/trainings` API to manage ILT
 
 ### List trainings
 ```bash
-curl -s "$BASE_URL/api/app/$TENANT/trainings?skip=0&limit=20&search=<term>" \
+curl -s "$BASE_URL/api/app/$TENANT/trainings?skip=0&limit=20" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID"
 ```
@@ -332,8 +336,8 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
 | trainingMode | int | Yes | `0`=Hybrid, `1`=Classroom, `2`=Online |
 | enrollmentType | int | Yes | `0`=All, `1`=Direct, `2`=ManagerNomination |
 | accessType | int | Yes | `0`=Private, `1`=Public |
-| trainingCompletionCriteria | int | Yes | `0`=Attendance, `1`=PostAssessment, `2`=Feedback |
-| trainingLibraryCriteria | int | Yes | `0`=NA, `1`=Mandatory, `2`=Optional |
+| trainingCompletionCriteria | int | Yes | `0`=Attendance, `1`=PostAssessment, `2`=TrainingOrTrainerFeedback |
+| trainingLibraryCriteria | int | Yes | `0`=None, `1`=OnCompletingPreAssessment, `2`=CompletingEvent |
 | completionPercentage | float | Yes | Default `100` |
 | description | string | No | Training description |
 | mandatory | bool | No | Mark as mandatory |
@@ -528,13 +532,26 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/sessionusers/bulk" \
 Response: `{"added": 2, "skipped": 0, "updated": 0}`
 
 ### Mark attendance
+
+First list session users to get their `eventSessionUserId` values, then mark attendance:
 ```bash
+# Get session user IDs
+curl -s "$BASE_URL/api/app/$TENANT/eventsessionusers/<session-id>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+
+# Mark attendance (body is an ARRAY of objects, not wrapped)
 curl -s -X POST "$BASE_URL/api/app/$TENANT/sessions/<session-id>/attendance" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID" \
-  -d '{"userIds": ["<user-id-1>", "<user-id-2>"]}'
+  -d '[
+    {"eventSessionUserId": "<session-user-id-1>", "attendance": true},
+    {"eventSessionUserId": "<session-user-id-2>", "attendance": true}
+  ]'
 ```
+
+Alternatively, enroll + mark attendance in one step via `sessionusers/bulk` with `"markAttendance": true`.
 
 ## Notifications
 

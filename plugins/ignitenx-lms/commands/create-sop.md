@@ -56,15 +56,38 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
 
 5. **Generate final document**. Save as PDF or DOCX.
 
-6. **Optionally publish** to the LMS:
+6. **Optionally publish** to the LMS using the 3-step SAS URL flow:
    ```bash
-   curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+   # Step 1: Get SAS upload URL
+   SAS_RESP=$(curl -s -X POST "$BASE_URL/api/app/$TENANT/upload" \
+     -H "Content-Type: application/json" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID" \
-     -F "file=@./sop-output.pdf" \
-     -F "title=<title>" \
-     -F "category=<category>" \
-     -F "description=<description>"
+     -d '{"fileName": "sop-output.pdf", "folder": "Document", "id": null}')
+   ITEM_ID=$(echo $SAS_RESP | jq -r '.id')
+   SAS_URL=$(echo $SAS_RESP | jq -r '.url')
+
+   # Step 2: Upload file (no auth headers needed)
+   curl -s -X PUT "$SAS_URL" \
+     -H "x-ms-blob-type: BlockBlob" \
+     -H "Content-Type: application/pdf" \
+     --data-binary @./sop-output.pdf
+
+   # Step 3: Create item metadata
+   CLEAN_URL=$(echo "$SAS_URL" | cut -d'?' -f1)
+   curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "X-Role-ID: $ROLE_ID" \
+     -d "{
+       \"id\": \"$ITEM_ID\",
+       \"name\": \"<title>\",
+       \"description\": \"<description>\",
+       \"type\": 1,
+       \"sourceType\": 1,
+       \"fileName\": \"sop-output.pdf\",
+       \"url\": \"$CLEAN_URL\"
+     }"
    ```
 
 7. **Optionally create a rollout** to assign to the target audience:
@@ -79,8 +102,8 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
        "startDate": "<YYYY-MM-DDT00:00:00Z>",
        "endDate": "<YYYY-MM-DDT00:00:00Z>",
        "noOfDays": <days>,
-       "accessType": 4,
-       "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
+       "accessType": 1,
+       "filterList": [{"key": "department", "value": ["<dept-id>"]}],
        "myLearning": true,
        "mandatory": true
      }'

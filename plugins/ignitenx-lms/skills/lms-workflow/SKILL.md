@@ -35,7 +35,7 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
 ### 2. Content Assessment
 - Check if existing content covers the topic:
   ```bash
-  curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=20&search=<topic+keywords>" \
+  curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=50" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID"
   ```
@@ -94,11 +94,11 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
   ```
 
   **folder values**: `Document`, `Video`, `Audio`, `Announcement`, `LibraryItem`
-  **type values**: `1`=Document, `2`=Video, `3`=URL, `4`=Scorm, `20`=Audio
+  **type values**: `0`=Url, `1`=Document, `2`=Audio, `3`=Video, `5`=SCORM
 
 - Verify published content:
   ```bash
-  curl -s "$BASE_URL/api/app/$TENANT/items?search=Title+Here" \
+  curl -s "$BASE_URL/api/app/$TENANT/items/$ITEM_ID" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID"
   ```
@@ -110,7 +110,7 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID"
 
-  curl -s "$BASE_URL/api/app/$TENANT/listusers?department=<dept-name>&skip=0&limit=20" \
+  curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&limit=20" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID"
   ```
@@ -126,8 +126,8 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
       "startDate": "2026-03-04T00:00:00Z",
       "endDate": "2026-04-01T00:00:00Z",
       "noOfDays": 28,
-      "accessType": 4,
-      "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
+      "accessType": 1,
+      "filterList": [{"key": "department", "value": ["<dept-id>"]}],
       "myLearning": true,
       "mandatory": true
     }'
@@ -267,13 +267,26 @@ curl -s -X POST "$BASE_URL/api/notifications/$TENANT/remainder/<session-id>?type
 ```
 
 ### 6. Mark Attendance
+
+First list session users to get `eventSessionUserId` values, then mark attendance:
 ```bash
+# Get enrolled session users
+curl -s "$BASE_URL/api/app/$TENANT/eventsessionusers/<session-id>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+
+# Mark attendance (body is an ARRAY of objects)
 curl -s -X POST "$BASE_URL/api/app/$TENANT/sessions/<session-id>/attendance" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Role-ID: $ROLE_ID" \
-  -d '{"userIds": ["<user-id-1>", "<user-id-2>"]}'
+  -d '[
+    {"eventSessionUserId": "<session-user-id-1>", "attendance": true},
+    {"eventSessionUserId": "<session-user-id-2>", "attendance": true}
+  ]'
 ```
+
+Alternatively, enroll + mark attendance in one step via `sessionusers/bulk` with `"markAttendance": true`.
 
 ### 7. Track Training Hours
 ```bash

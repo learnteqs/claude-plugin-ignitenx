@@ -78,7 +78,7 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
      }"
    ```
 
-   **type values**: `1`=Document, `2`=Video, `3`=URL, `4`=Scorm, `20`=Audio
+   **type values**: `0`=Url, `1`=Document, `2`=Audio, `3`=Video, `5`=SCORM
 
 4. **Confirm** publication by retrieving the new content item:
    ```bash

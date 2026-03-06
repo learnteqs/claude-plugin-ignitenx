@@ -8,7 +8,7 @@
       "name": "ignitenx-lms",
       "source": "./plugins/ignitenx-lms",
       "description": "L&D workflow automation for the igniteNX LMS - intake training requests, create SOPs, publish content, assign learners, and track completion.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "author": {
         "name": "Learnteq Solutions"
       },

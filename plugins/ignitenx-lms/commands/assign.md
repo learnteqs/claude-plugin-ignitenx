@@ -30,7 +30,7 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
 
 1. **Identify the content** to assign. Ask for content ID or search:
    ```bash
-   curl -s "$BASE_URL/api/app/$TENANT/items?search=<term>&skip=0&limit=20" \
+   curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=50" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID"
    ```
@@ -48,7 +48,7 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
 
    List members of a group:
    ```bash
-   curl -s "$BASE_URL/api/app/$TENANT/listusers?department=<dept-name>&skip=0&limit=20" \
+   curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&limit=20" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID"
    ```
@@ -71,14 +71,15 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
        "startDate": "<YYYY-MM-DDT00:00:00Z>",
        "endDate": "<YYYY-MM-DDT00:00:00Z>",
        "noOfDays": <days>,
-       "accessType": 4,
-       "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
+       "accessType": 1,
+       "filterList": [{"key": "department", "value": ["<dept-id>"]}],
        "myLearning": true,
        "mandatory": true
      }'
    ```
 
-   **accessType values**: `0` = Internal, `1` = Private, `2` = External, `3` = All users, `4` = Criteria-based (uses `queryProperty`).
+   **accessType values**: `0` = Private, `1` = Public.
+   **Audience targeting**: Use `filterList` with `{key, value}` objects. Keys: `department`, `location`, `grade`, `organisationUnit`.
 
    When `myLearning` is `true`, item users are auto-created for all matched users.
 

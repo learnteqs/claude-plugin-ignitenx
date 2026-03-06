@@ -65,8 +65,8 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
    **Required fields**: `name`, `trainingCode`, `objectives`, `effectiveMethodology`, `trainingMode`, `enrollmentType`, `accessType`, `trainingCompletionCriteria`, `trainingLibraryCriteria`, `completionPercentage`
 
    trainingMode: 0=Hybrid, 1=Classroom, 2=Online
-   trainingCompletionCriteria: 0=Attendance, 1=PostAssessment, 2=Feedback
-   trainingLibraryCriteria: 0=NA, 1=Mandatory, 2=Optional
+   trainingCompletionCriteria: 0=Attendance, 1=PostAssessment, 2=TrainingOrTrainerFeedback
+   trainingLibraryCriteria: 0=None, 1=OnCompletingPreAssessment, 2=CompletingEvent
 
    `allowSelfEnrolWithAttendance` (optional): enables walk-in enrollment for events under this training.
 
@@ -125,13 +125,27 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
    ```
 
 6. **Mark attendance**:
+
+   First list session users to get `eventSessionUserId` values:
+   ```bash
+   curl -s "$BASE_URL/api/app/$TENANT/eventsessionusers/<session-id>" \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "X-Role-ID: $ROLE_ID"
+   ```
+
+   Then mark attendance (body is an ARRAY of objects):
    ```bash
    curl -s -X POST "$BASE_URL/api/app/$TENANT/sessions/<session-id>/attendance" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID" \
-     -d '{"userIds": ["<user-id-1>", "<user-id-2>"]}'
+     -d '[
+       {"eventSessionUserId": "<session-user-id-1>", "attendance": true},
+       {"eventSessionUserId": "<session-user-id-2>", "attendance": true}
+     ]'
    ```
+
+   Alternatively, enroll + mark attendance in one step via `sessionusers/bulk` with `"markAttendance": true`.
 
 7. **Report** the result: training created, event scheduled, users enrolled, attendance recorded.
 
