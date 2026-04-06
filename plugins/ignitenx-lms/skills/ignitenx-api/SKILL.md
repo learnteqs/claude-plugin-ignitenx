@@ -1,3 +1,8 @@
+---
+name: ignitenx-api
+description: Complete API reference for the igniteNX LMS platform including authentication, content management, rollouts, trainings, approvals, and notifications
+---
+
 # igniteNX API Reference
 
 Programmatic access to the igniteNX LMS platform via curl. All services share the same base URL — Azure Front Door routes by path prefix.
@@ -195,18 +200,59 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/rollout" \
     "startDate": "2026-03-04T00:00:00Z",
     "endDate": "2026-04-01T00:00:00Z",
     "noOfDays": 28,
-    "accessType": 1,
-    "filterList": [{"key": "department", "value": ["<dept-id>"]}],
+    "accessType": 4,
+    "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
     "myLearning": true,
     "mandatory": true
   }'
 ```
 
-**accessType values**: `0` = Private, `1` = Public
+**Rollout accessType values**:
 
-**Audience targeting**: Use `filterList` (array of `{key, value}` objects) to target by criteria. Supported keys: `department`, `location`, `grade`, `organisationUnit`. Alternatively, `queryProperty` accepts raw JSON for advanced filtering.
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | Internal | All active internal employees |
+| 1 | Private | Manually selected users only |
+| 2 | External | All active external employees |
+| 3 | Everyone | All active users |
+| 4 | Criteria | Uses `queryProperty` to filter by department, location, grade, etc. |
+
+**Audience targeting**: Use `queryProperty` (array of `{key, value}` objects) to target by criteria when `accessType` is `4`. Supported keys:
+
+| Key | Lookup Endpoint | Description |
+|-----|----------------|-------------|
+| `department` | `GET /lookupdepartments` | Filter by department |
+| `location` | `GET /lookuplocations` | Filter by location |
+| `designation` | `GET /lookupdesignations` | Filter by designation |
+| `grade` | `GET /lookupgrades` | Filter by grade |
+| `level` | `GET /lookuplevels` | Filter by level |
+| `cost_centre` | `GET /lookupcostcentres` | Filter by cost centre |
+| `organisation_unit` | `GET /lookuporgunits` | Filter by organisation unit |
+| `business_entity` | `GET /lookupbusinessentities` | Filter by business entity (recursive hierarchy) |
+| `date_of_joining` | N/A | Filter by date range (value: `["YYYY-MM-DD", "YYYY-MM-DD"]`) |
+
+Multiple criteria use AND logic — users must match ALL filters.
 
 When `myLearning` is `true`, item users are auto-created for all matched users.
+
+#### Rollout fields reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | Yes | Rollout name |
+| itemId | uuid | Yes | Content item ID to assign |
+| startDate | datetime | Yes | Start date (ISO 8601) |
+| endDate | datetime | No | End date (ISO 8601) |
+| noOfDays | int | No | Number of days for completion (default 28) |
+| accessType | int | Yes | See accessType values above |
+| queryProperty | array | No | Array of `{key, value}` filter objects (required when accessType=4) |
+| myLearning | bool | No | Auto-create item users for matched users (default false) |
+| availableLearning | bool | No | Show in "Available Learning" section |
+| mandatory | bool | No | Mark as mandatory |
+| onboarding | bool | No | Mark as onboarding content |
+| compliance | bool | No | Mark as compliance content |
+| complianceType | uuid | No | Compliance type ID (when compliance=true) |
+| recurrence | int | No | `0`=Monthly, `1`=Quarterly, `2`=Annual |
 
 ### List rollouts for a content item
 ```bash
@@ -275,6 +321,44 @@ curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&lim
   -H "X-Role-ID: $ROLE_ID"
 ```
 
+## Lookup Endpoints (for Rollout Criteria)
+
+Lookup endpoints return lightweight `{id, name}` arrays for populating rollout criteria values. Use these to get the ID of a department, location, etc. before creating a criteria-based rollout.
+
+```bash
+# Departments
+curl -s "$BASE_URL/api/app/$TENANT/lookupdepartments" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Locations
+curl -s "$BASE_URL/api/app/$TENANT/lookuplocations" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Designations
+curl -s "$BASE_URL/api/app/$TENANT/lookupdesignations" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Grades
+curl -s "$BASE_URL/api/app/$TENANT/lookupgrades" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Levels
+curl -s "$BASE_URL/api/app/$TENANT/lookuplevels" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Cost Centres
+curl -s "$BASE_URL/api/app/$TENANT/lookupcostcentres" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Organisation Units
+curl -s "$BASE_URL/api/app/$TENANT/lookuporgunits" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+
+# Business Entities
+curl -s "$BASE_URL/api/app/$TENANT/lookupbusinessentities" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
+```
+
 ## Categories
 
 ### List categories
@@ -335,7 +419,7 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
 | effectiveMethodology | string | Yes | Teaching methodology description |
 | trainingMode | int | Yes | `0`=Hybrid, `1`=Classroom, `2`=Online |
 | enrollmentType | int | Yes | `0`=All, `1`=Direct, `2`=ManagerNomination |
-| accessType | int | Yes | `0`=Private, `1`=Public |
+| accessType | int | Yes | `0`=Private, `1`=Public (Note: different from Rollout accessType) |
 | trainingCompletionCriteria | int | Yes | `0`=Attendance, `1`=PostAssessment, `2`=TrainingOrTrainerFeedback |
 | trainingLibraryCriteria | int | Yes | `0`=None, `1`=OnCompletingPreAssessment, `2`=CompletingEvent |
 | completionPercentage | float | Yes | Default `100` |
@@ -956,7 +1040,7 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/reports/<template-name>" \
 
 **Report status**: `0` = Queued, `1` = Generating, `2` = Succeeded, `3` = Failed
 
-**Available templates**: `UserDetailsReport`, `CourseUserReport`, `TestUserReport`, `TrainingSummaryReport`, `TrainingDetailsReport`, `ConsolidatedMISReport`, `TrainingHoursReport`, `LearningHoursReport`, `ComplianceReport`, `LibraryUsageReport`
+**Available templates**: `UserDetailsReport`, `CourseUserReport`, `TestUserReport`, `TrainingSummaryReport`, `TrainingEventsReport`, `ConsolidatedMISReport`, `TrainingHoursReport`, `LearningHoursReport`, `ComplianceReport`, `LibraryUsageReport`
 
 ### Download completed report
 ```bash

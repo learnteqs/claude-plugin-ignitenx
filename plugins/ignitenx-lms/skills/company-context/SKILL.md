@@ -1,3 +1,8 @@
+---
+name: company-context
+description: Organization-specific context template for customizing the igniteNX plugin per customer deployment
+---
+
 # Company Context Template
 
 > **Note**: Customize this file for each customer deployment. Replace placeholders with actual company information.
