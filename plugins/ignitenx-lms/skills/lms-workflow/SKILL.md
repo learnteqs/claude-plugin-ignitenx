@@ -137,7 +137,7 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
 
   **accessType**: `0`=Internal, `1`=Private, `2`=External, `3`=Everyone, `4`=Criteria (uses `queryProperty`).
 
-  **Supported `queryProperty` keys**: `department`, `location`, `designation`, `grade`, `level`, `cost_centre`, `organisation_unit`, `business_entity`, `date_of_joining`. Multiple criteria use AND logic.
+  **Supported `queryProperty` keys**: `department`, `location`, `designation`, `grade`, `level`, `cost_centre`, `organisation_unit`, `business_entity`. Multiple criteria use AND logic.
 
   When `myLearning` is `true`, item users are auto-created for all matched users.
 

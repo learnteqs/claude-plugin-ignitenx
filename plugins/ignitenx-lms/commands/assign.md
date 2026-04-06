@@ -59,8 +59,6 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
    | Cost Centre | `cost_centre` | `GET /lookupcostcentres` |
    | Organisation Unit | `organisation_unit` | `GET /lookuporgunits` |
    | Business Entity | `business_entity` | `GET /lookupbusinessentities` |
-   | Date of Joining | `date_of_joining` | N/A (use date range values) |
-
    Multiple criteria can be combined — users must match ALL filters (AND logic).
 
    For individual user assignment, search users:

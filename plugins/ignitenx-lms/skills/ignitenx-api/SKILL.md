@@ -229,8 +229,6 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/rollout" \
 | `cost_centre` | `GET /lookupcostcentres` | Filter by cost centre |
 | `organisation_unit` | `GET /lookuporgunits` | Filter by organisation unit |
 | `business_entity` | `GET /lookupbusinessentities` | Filter by business entity (recursive hierarchy) |
-| `date_of_joining` | N/A | Filter by date range (value: `["YYYY-MM-DD", "YYYY-MM-DD"]`) |
-
 Multiple criteria use AND logic — users must match ALL filters.
 
 When `myLearning` is `true`, item users are auto-created for all matched users.
