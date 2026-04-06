@@ -30,25 +30,40 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
 
 1. **Identify the content** to assign. Ask for content ID or search:
    ```bash
-   curl -s "$BASE_URL/api/app/$TENANT/items?skip=0&limit=50" \
+   curl -s "$BASE_URL/api/app/$TENANT/items?search=<term>&skip=0&limit=20" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID"
    ```
 
 2. **Identify the audience**. Ask who should receive the assignment:
-   - A group/department (recommended — use rollout with criteria)
-   - Specific user IDs (use manual item user assignment)
+   - **By criteria** (recommended) — assign to a department, location, grade, etc. via rollout criteria
+   - **By specific users** — assign to individual user IDs via manual item user assignment
 
-   List available groups:
+   For criteria-based assignment, use a lookup endpoint to get the criterion value ID:
    ```bash
-   curl -s "$BASE_URL/api/app/$TENANT/departments?skip=0&limit=20" \
+   # Example: get department IDs
+   curl -s "$BASE_URL/api/app/$TENANT/lookupdepartments" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID"
    ```
 
-   List members of a group:
+   **Supported criteria and their lookup endpoints:**
+
+   | Criteria | Key for `queryProperty` | Lookup Endpoint |
+   |----------|------------------------|-----------------|
+   | Department | `department` | `GET /lookupdepartments` |
+   | Location | `location` | `GET /lookuplocations` |
+   | Designation | `designation` | `GET /lookupdesignations` |
+   | Grade | `grade` | `GET /lookupgrades` |
+   | Level | `level` | `GET /lookuplevels` |
+   | Cost Centre | `cost_centre` | `GET /lookupcostcentres` |
+   | Organisation Unit | `organisation_unit` | `GET /lookuporgunits` |
+   | Business Entity | `business_entity` | `GET /lookupbusinessentities` |
+   Multiple criteria can be combined — users must match ALL filters (AND logic).
+
+   For individual user assignment, search users:
    ```bash
-   curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&limit=20" \
+   curl -s "$BASE_URL/api/app/$TENANT/listusers?name=<name>&offset=0&limit=20" \
      -H "Authorization: Bearer $TOKEN" \
      -H "X-Role-ID: $ROLE_ID"
    ```
@@ -71,15 +86,14 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
        "startDate": "<YYYY-MM-DDT00:00:00Z>",
        "endDate": "<YYYY-MM-DDT00:00:00Z>",
        "noOfDays": <days>,
-       "accessType": 1,
-       "filterList": [{"key": "department", "value": ["<dept-id>"]}],
+       "accessType": 4,
+       "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
        "myLearning": true,
        "mandatory": true
      }'
    ```
 
-   **accessType values**: `0` = Private, `1` = Public.
-   **Audience targeting**: Use `filterList` with `{key, value}` objects. Keys: `department`, `location`, `grade`, `organisationUnit`.
+   **accessType values**: `0` = Internal, `1` = Private, `2` = External, `3` = All users, `4` = Criteria-based (uses `queryProperty`).
 
    When `myLearning` is `true`, item users are auto-created for all matched users.
 

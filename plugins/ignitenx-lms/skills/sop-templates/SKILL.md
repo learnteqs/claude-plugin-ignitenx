@@ -1,3 +1,8 @@
+---
+name: sop-templates
+description: Standard Operating Procedure document templates for creating SOPs in igniteNX
+---
+
 # SOP Document Templates
 
 ## Standard SOP Template

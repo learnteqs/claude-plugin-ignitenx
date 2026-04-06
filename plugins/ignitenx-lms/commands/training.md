@@ -65,8 +65,8 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
    **Required fields**: `name`, `trainingCode`, `objectives`, `effectiveMethodology`, `trainingMode`, `enrollmentType`, `accessType`, `trainingCompletionCriteria`, `trainingLibraryCriteria`, `completionPercentage`
 
    trainingMode: 0=Hybrid, 1=Classroom, 2=Online
-   trainingCompletionCriteria: 0=Attendance, 1=PostAssessment, 2=TrainingOrTrainerFeedback
-   trainingLibraryCriteria: 0=None, 1=OnCompletingPreAssessment, 2=CompletingEvent
+   trainingCompletionCriteria: 0=Attendance, 1=PostAssessment, 2=Feedback
+   trainingLibraryCriteria: 0=NA, 1=Mandatory, 2=Optional
 
    `allowSelfEnrolWithAttendance` (optional): enables walk-in enrollment for events under this training.
 
@@ -124,9 +124,9 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
      -H "X-Role-ID: $ROLE_ID"
    ```
 
-6. **Mark attendance**:
+6. **Mark attendance** (two-step process):
 
-   First list session users to get `eventSessionUserId` values:
+   First, list session users to get their `eventSessionUserId` values:
    ```bash
    curl -s "$BASE_URL/api/app/$TENANT/eventsessionusers/<session-id>" \
      -H "Authorization: Bearer $TOKEN" \

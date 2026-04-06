@@ -1,3 +1,8 @@
+---
+name: lms-workflow
+description: Standard L&D workflows for content lifecycle, ILT management, notifications, approvals, and reporting in igniteNX
+---
+
 # L&D Workflow Guide
 
 This skill describes the standard L&D workflows for processing training requests, SOPs, and instructor-led training using igniteNX.
@@ -104,17 +109,14 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
   ```
 
 ### 5. Rollout (Assign content to audience)
-- Identify target audience:
+- Identify target audience using lookup endpoints to get criteria value IDs:
   ```bash
-  curl -s "$BASE_URL/api/app/$TENANT/departments?skip=0&limit=20" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "X-Role-ID: $ROLE_ID"
-
-  curl -s "$BASE_URL/api/app/$TENANT/listusers?departmentId=<dept-id>&offset=0&limit=20" \
+  # Get department IDs (or use lookuplocations, lookupgrades, etc.)
+  curl -s "$BASE_URL/api/app/$TENANT/lookupdepartments" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Role-ID: $ROLE_ID"
   ```
-- Create a rollout to assign content with deadline:
+- Create a criteria-based rollout to assign content with deadline:
   ```bash
   curl -s -X POST "$BASE_URL/api/app/$TENANT/rollout" \
     -H "Content-Type: application/json" \
@@ -126,12 +128,16 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
       "startDate": "2026-03-04T00:00:00Z",
       "endDate": "2026-04-01T00:00:00Z",
       "noOfDays": 28,
-      "accessType": 1,
-      "filterList": [{"key": "department", "value": ["<dept-id>"]}],
+      "accessType": 4,
+      "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
       "myLearning": true,
       "mandatory": true
     }'
   ```
+
+  **accessType**: `0`=Internal, `1`=Private, `2`=External, `3`=Everyone, `4`=Criteria (uses `queryProperty`).
+
+  **Supported `queryProperty` keys**: `department`, `location`, `designation`, `grade`, `level`, `cost_centre`, `organisation_unit`, `business_entity`. Multiple criteria use AND logic.
 
   When `myLearning` is `true`, item users are auto-created for all matched users.
 
@@ -443,7 +449,7 @@ curl -s "$BASE_URL/api/app/$TENANT/downloadreport/<report-table>" \
   -H "X-Role-ID: $ROLE_ID"
 ```
 
-**Available templates**: `UserDetailsReport`, `CourseUserReport`, `TestUserReport`, `TrainingSummaryReport`, `TrainingDetailsReport`, `ConsolidatedMISReport`, `TrainingHoursReport`, `LearningHoursReport`, `ComplianceReport`, `LibraryUsageReport`
+**Available templates**: `UserDetailsReport`, `CourseUserReport`, `TestUserReport`, `TrainingSummaryReport`, `TrainingEventsReport`, `ConsolidatedMISReport`, `TrainingHoursReport`, `LearningHoursReport`, `ComplianceReport`, `LibraryUsageReport`
 
 ---
 
