@@ -127,7 +127,7 @@ Upload uses a 3-step SAS URL flow (do NOT use multipart form):
       "itemId": "<content-id>",
       "startDate": "2026-03-04T00:00:00Z",
       "endDate": "2026-04-01T00:00:00Z",
-      "noOfDays": 28,
+      "timeToComplete": 28,
       "accessType": 4,
       "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
       "myLearning": true,

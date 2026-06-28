@@ -57,7 +57,6 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
        "trainingCompletionCriteria": 0,
        "trainingLibraryCriteria": 0,
        "completionPercentage": 100,
-       "mandatory": true,
        "allowSelfEnrolWithAttendance": true
      }'
    ```
@@ -65,8 +64,8 @@ The `X-User-ID` header is **not needed** — middleware extracts it from the Bea
    **Required fields**: `name`, `trainingCode`, `objectives`, `effectiveMethodology`, `trainingMode`, `enrollmentType`, `accessType`, `trainingCompletionCriteria`, `trainingLibraryCriteria`, `completionPercentage`
 
    trainingMode: 0=Hybrid, 1=Classroom, 2=Online
-   trainingCompletionCriteria: 0=Attendance, 1=PostAssessment, 2=Feedback
-   trainingLibraryCriteria: 0=NA, 1=Mandatory, 2=Optional
+   trainingCompletionCriteria: 0=Attendance, 1=AttendanceAndPostAssessment, 2=AttendancePostAssessmentAndFeedback, 3=AttendanceAndFeedback
+   trainingLibraryCriteria: 0=None, 1=OnCompletingPreAssessment, 2=CompletingEvent
 
    `allowSelfEnrolWithAttendance` (optional): enables walk-in enrollment for events under this training.
 
