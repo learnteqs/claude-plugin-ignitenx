@@ -85,7 +85,7 @@ TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/$TENANT/apikey-login" \
        "itemId": "<content-id>",
        "startDate": "<YYYY-MM-DDT00:00:00Z>",
        "endDate": "<YYYY-MM-DDT00:00:00Z>",
-       "noOfDays": <days>,
+       "timeToComplete": <days>,
        "accessType": 4,
        "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
        "myLearning": true,

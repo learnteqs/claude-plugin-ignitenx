@@ -63,6 +63,9 @@ The `/items` endpoint handles ALL content types. The `type` field (integer) dist
 | 13 | Course | Course (grouping of items) |
 | 14 | CourseraCourse | Coursera integration |
 | 15 | UdemyCourse | Udemy integration |
+| 17 | Go1 | Go1 content integration |
+| 18 | LinkedIn | LinkedIn Learning content |
+| 19 | Declaration | Declaration / acknowledgement content |
 | 21 | Poll | Poll |
 | 22 | Survey | Survey |
 | 23 | Feedback | Feedback form |
@@ -70,6 +73,7 @@ The `/items` endpoint handles ALL content types. The `type` field (integer) dist
 | 25 | AICC | AICC package (ZIP) |
 | 26 | Announcement | Announcement |
 | 27 | LearningPath | Learning path |
+| 28 | CMI5 | CMI5 package (ZIP) |
 
 Additional enums:
 - `sourceType`: `0` = URL, `1` = Upload (file to Azure Blob)
@@ -139,7 +143,7 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/upload" \
   -H "X-Role-ID: $ROLE_ID" \
   -d '{"fileName": "sop.pdf", "folder": "Document", "id": null}'
 ```
-Returns `{id, url}` where `id` is the new item ID and `url` is the SAS URL for upload.
+Returns a full Item object, but only `id` (the new item ID) and `url` (the SAS upload URL) are populated — ignore the other zero-valued fields.
 
 **folder values** (must match content type):
 
@@ -182,7 +186,125 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
 **Item type values**: `0` = Url, `1` = Document, `2` = Audio, `3` = Video, `5` = SCORM (see full Item Type Enum table above)
 **sourceType**: `0` = URL (external link), `1` = Upload (file in Azure Blob)
 
+> **Response**: `POST /items` returns HTTP 200 and echoes your request body back to confirm creation — not the
+> stored record. Fetch `GET /items/:id` afterwards for server-populated fields (createdAt, status, etc.).
+
 > **Important**: Strip the SAS query params from the URL before saving. Use only the base path (e.g., `https://app.ignitenx.com/storage/local/Document/{id}/sop.pdf`).
+
+## Content Type Creation Recipes
+
+Per–content-type bodies for `POST /items`. **Uploaded** types (`sourceType=1`) first run the 3-step SAS flow
+above (or `scormUploadInit` for SCORM); **URL/HTML** types (`sourceType=0`) need no upload.
+
+**Document (type 1)** — upload with `folder=Document`, then:
+```json
+{"id": "<id>", "name": "Safety SOP", "type": 1, "sourceType": 1, "fileName": "sop.pdf", "url": "<clean-sas-url>"}
+```
+
+**Audio (type 2)** — upload with `folder=Audio`:
+```json
+{"id": "<id>", "name": "Briefing", "type": 2, "sourceType": 1, "fileName": "briefing.mp3", "url": "<clean-sas-url>"}
+```
+
+**Video — uploaded (type 3)** — upload with `folder=Video`:
+```json
+{"id": "<id>", "name": "Ramp Walkthrough", "type": 3, "sourceType": 1, "fileName": "ramp.mp4", "url": "<clean-sas-url>"}
+```
+
+**Video — YouTube / external URL (type 3, no upload)**:
+```json
+{"name": "Safety Briefing (YouTube)", "type": 3, "sourceType": 0, "url": "https://www.youtube.com/watch?v=XXXX"}
+```
+
+**Video with questions (type 12)** — upload the video (`folder=Video`), then attach timed questions:
+```json
+{"id": "<id>", "name": "Interactive Safety", "type": 12, "sourceType": 1, "fileName": "v.mp4", "url": "<clean-sas-url>",
+ "questions": [{"question": "PPE required?", "options": ["Yes","No"], "answer": "Yes", "time": 30}]}
+```
+`time` is the video timestamp (seconds) at which the question appears.
+
+**SCORM (type 5)** — uses its own init endpoint (public container), NOT the generic `/upload`:
+```bash
+# 1) init — only .zip is accepted
+curl -s -X POST "$BASE_URL/api/app/$TENANT/scormUploadInit" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID" \
+  -d '{"fileName": "course.zip"}'
+# returns {id, fileName, path, url, baseUrl, container, folderPrefix}
+# 2) PUT the zip to the returned url (header x-ms-blob-type: BlockBlob), then create the item:
+```
+```json
+{"id": "<id>", "name": "DG Handling SCORM", "type": 5, "sourceType": 1, "fileName": "course.zip", "url": "<baseUrl>", "scormVersion": 2}
+```
+`scormVersion`: `1` = SCORM 1.2, `2` = SCORM 2004.
+
+**xAPI / ExperienceAPI (type 6)** and **AICC (type 25)** — ZIP packages; upload via the SAS flow
+(`folder=ExperienceAPI` / `AICC`), then create with `type: 6` / `type: 25`, `sourceType: 1`, `fileName`, `url`.
+
+**FlashCard (type 4)** — upload images/ZIP with `folder=FlashCard`, then:
+```json
+{"id": "<id>", "name": "Signage Cards", "type": 4, "sourceType": 1, "flashCardFiles": ["<url1>", "<url2>"]}
+```
+
+**Embed (type 10)** — embedded HTML/iframe, no upload:
+```json
+{"name": "Dashboard", "type": 10, "sourceType": 0, "url": "<embeddable-url>"}
+```
+
+**Page (type 11)** — authored HTML page, no upload:
+```json
+{"name": "Welcome", "type": 11, "sourceType": 0, "content": "<h1>Welcome</h1>"}
+```
+
+**URL (type 0)** — external link, no upload:
+```json
+{"name": "Regulator Site", "type": 0, "sourceType": 0, "url": "https://example.com"}
+```
+
+## E-learning (Course) with Child Items
+
+An **E-learning** item (`type=24`) is a *parent* that groups ordered *child* resources (videos, documents,
+SCORM, assessments, etc.). Create the parent, create each child as a normal item, then link them.
+
+### 1. Create the parent E-learning item
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/items" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{"name": "Ramp Safety Course", "type": 24, "sourceType": 0}'
+```
+
+### 2. Create each child item
+Create each resource as a normal standalone item (any content type — see **Content Type Creation Recipes**
+above), e.g. a video (`type=3`) or document (`type=1`). Keep each returned item `id` to use as the `childId`.
+
+### 3. Link a child to the parent
+```bash
+curl -s -X POST "$BASE_URL/api/app/$TENANT/childItems" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID" \
+  -d '{
+    "childId": "<child-item-id>",
+    "parentId": "<parent-elearning-id>",
+    "name": "Module 1 — Introduction",
+    "type": 3,
+    "sequenceNumber": 1
+  }'
+```
+Repeat for each child, incrementing `sequenceNumber` to control order. `id` is optional (auto-generated when
+omitted); `sectionId` is optional. The endpoint echoes the created child link back, and returns **409** if
+that resource is already linked to the parent. A background job auto-creates the child item-users.
+
+### 4. List a parent course's child items (admin)
+```bash
+curl -s "$BASE_URL/api/app/$TENANT/childItemByParent/<parent-elearning-id>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Role-ID: $ROLE_ID"
+```
+> `GET /childItems/:id` is the **learner**-side variant (it takes an *item-user* id and enforces
+> prerequisites). For admin listing by parent item id use `/childItemByParent/:id` (above); use
+> `/childItemById/:id` to fetch a single child link.
 
 ## Rollout (Assign content to audience)
 
@@ -199,7 +321,7 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/rollout" \
     "itemId": "<content-id>",
     "startDate": "2026-03-04T00:00:00Z",
     "endDate": "2026-04-01T00:00:00Z",
-    "noOfDays": 28,
+    "timeToComplete": 28,
     "accessType": 4,
     "queryProperty": [{"key": "department", "value": ["<dept-id>"]}],
     "myLearning": true,
@@ -241,7 +363,7 @@ When `myLearning` is `true`, item users are auto-created for all matched users.
 | itemId | uuid | Yes | Content item ID to assign |
 | startDate | datetime | Yes | Start date (ISO 8601) |
 | endDate | datetime | No | End date (ISO 8601) |
-| noOfDays | int | No | Number of days for completion (default 28) |
+| timeToComplete | int | No | Days allowed to complete. If omitted, stored as NULL and the completion deadline falls back to the rollout endDate — there is no default |
 | accessType | int | Yes | See accessType values above |
 | queryProperty | array | No | Array of `{key, value}` filter objects (required when accessType=4) |
 | myLearning | bool | No | Auto-create item users for matched users (default false) |
@@ -352,7 +474,7 @@ curl -s "$BASE_URL/api/app/$TENANT/lookupcostcentres" \
 curl -s "$BASE_URL/api/app/$TENANT/lookuporgunits" \
   -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
 
-# Business Entities
+# Business Entities — requires the Business Entity feature enabled for the tenant (returns HTTP 404 if disabled)
 curl -s "$BASE_URL/api/app/$TENANT/lookupbusinessentities" \
   -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID"
 ```
@@ -402,7 +524,6 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
     "trainingCompletionCriteria": 0,
     "trainingLibraryCriteria": 0,
     "completionPercentage": 100,
-    "mandatory": true,
     "allowSelfEnrolWithAttendance": true
   }'
 ```
@@ -418,11 +539,10 @@ curl -s -X POST "$BASE_URL/api/app/$TENANT/trainings" \
 | trainingMode | int | Yes | `0`=Hybrid, `1`=Classroom, `2`=Online |
 | enrollmentType | int | Yes | `0`=All, `1`=Direct, `2`=ManagerNomination |
 | accessType | int | Yes | `0`=Private, `1`=Public (Note: different from Rollout accessType) |
-| trainingCompletionCriteria | int | Yes | `0`=Attendance, `1`=PostAssessment, `2`=TrainingOrTrainerFeedback |
+| trainingCompletionCriteria | int | Yes | `0`=Attendance, `1`=AttendanceAndPostAssessment, `2`=AttendancePostAssessmentAndFeedback, `3`=AttendanceAndFeedback |
 | trainingLibraryCriteria | int | Yes | `0`=None, `1`=OnCompletingPreAssessment, `2`=CompletingEvent |
 | completionPercentage | float | Yes | Default `100` |
 | description | string | No | Training description |
-| mandatory | bool | No | Mark as mandatory |
 | allowSelfEnrolWithAttendance | bool | No | Enable walk-in enrollment for events |
 | trainingTypeId | uuid | No | Training type ID |
 | categoryIds | uuid[] | No | Category IDs |
@@ -897,7 +1017,7 @@ curl -s "$BASE_URL/api/app/$TENANT/reminders" \
   -H "X-Role-ID: $ROLE_ID"
 ```
 
-**Reminder types**: `0` = Consolidate Course, `1` = Training, `2` = Training to Trainer, `3` = Post Training Activities
+**Reminder types**: `0` = Consolidate Course, `1` = Training, `2` = Training to Trainer, `3` = Post Training Activities, `4` = Consolidate Manager Feedback, `5` = Attendance
 
 ### Update reminder (enable/disable)
 ```bash
