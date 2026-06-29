@@ -229,7 +229,7 @@ above (or `scormUploadInit` for SCORM); **URL/HTML** types (`sourceType=0`) need
 curl -s -X POST "$BASE_URL/api/app/$TENANT/scormUploadInit" \
   -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -H "X-Role-ID: $ROLE_ID" \
   -d '{"fileName": "course.zip"}'
-# returns {id, url, baseUrl, path, container, folderPrefix}
+# returns {id, fileName, path, url, baseUrl, container, folderPrefix}
 # 2) PUT the zip to the returned url (header x-ms-blob-type: BlockBlob), then create the item:
 ```
 ```json
@@ -363,7 +363,7 @@ When `myLearning` is `true`, item users are auto-created for all matched users.
 | itemId | uuid | Yes | Content item ID to assign |
 | startDate | datetime | Yes | Start date (ISO 8601) |
 | endDate | datetime | No | End date (ISO 8601) |
-| timeToComplete | int | No | Number of days for completion (default 28) |
+| timeToComplete | int | No | Days allowed to complete. If omitted, stored as NULL and the completion deadline falls back to the rollout endDate — there is no default |
 | accessType | int | Yes | See accessType values above |
 | queryProperty | array | No | Array of `{key, value}` filter objects (required when accessType=4) |
 | myLearning | bool | No | Auto-create item users for matched users (default false) |
