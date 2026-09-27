@@ -1,6 +1,30 @@
 # Changelog
 
-## 1.0.5
+## ignitenx-tm 0.1.0
+
+First release: the skeleton of the tenant-provisioning agent.
+
+- **tpa-mcp**: a bundled MCP server with one tool, `tpa_get_identity`. It exchanges the Tenant Manager agent key for a
+  short-lived token, calls `/me`, and refuses to continue in any of these cases:
+  - the key holds anything beyond the agent's allowed permissions;
+  - the key reports super-admin access;
+  - Tenant Manager identifies the token as anyone other than this key.
+
+  It never returns or logs the key or the token.
+- **Key handling**: the key can come from `TM_AGENT_KEY_FILE` instead of the environment. The server refuses to run
+  without certificate checks, or against a non-https Tenant Manager other than localhost, and it never follows a redirect.
+- **Default-deny hook**: a `PreToolUse` hook denies every tool except this version's `tpa_*` tools, including
+  built-in tools, other plugins and claude.ai connectors.
+  - It blocks with exit code 2, even under `bypassPermissions`.
+  - It runs `node` directly with no shell, so it behaves the same under bash, pwsh and Windows PowerShell.
+  - If `node` itself can't start, Claude Code lets the tool run. That's why the documented runner flags are required.
+- **`/ignitenx-tm:poll`**: runs the identity check that starts every agent cycle.
+- **Headless proof**: `npm run proof:headless` checks real `claude -p` runs against a stand-in Tenant Manager. It
+  covers the plugin loading, the tool working, the hook firing, and a harmless canary being denied. A hostile
+  `bypassPermissions` prompt then must have every other tool denied, with no side effect and no key in the transcript.
+  The hostile run is skipped unless the canary passed.
+
+## ignitenx-lms 1.0.5
 
 API-alignment pass against the live IgniteNX backend (demo-readiness):
 

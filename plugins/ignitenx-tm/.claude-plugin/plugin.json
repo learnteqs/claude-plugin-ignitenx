@@ -1,0 +1,17 @@
+{
+  "name": "ignitenx-tm",
+  "version": "0.1.0",
+  "description": "Tenant-provisioning agent for IgniteNX Tenant Manager. Talks to Tenant Manager only through its bundled tpa-mcp tools, with every other tool denied.",
+  "author": {
+    "name": "Learnteq Solutions"
+  },
+  "homepage": "https://ignitenx.com",
+  "keywords": [
+    "ignitenx",
+    "tenant-manager",
+    "provisioning",
+    "agent",
+    "mcp"
+  ],
+  "defaultEnabled": false
+}

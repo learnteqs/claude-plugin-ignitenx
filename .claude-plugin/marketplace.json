@@ -14,7 +14,32 @@
       },
       "homepage": "https://ignitenx.com",
       "category": "productivity",
-      "tags": ["lms", "learning", "sop", "training", "l&d", "approvals", "notifications"]
+      "tags": [
+        "lms",
+        "learning",
+        "sop",
+        "training",
+        "l&d",
+        "approvals",
+        "notifications"
+      ]
+    },
+    {
+      "name": "ignitenx-tm",
+      "source": "./plugins/ignitenx-tm",
+      "description": "Tenant-provisioning agent for igniteNX Tenant Manager. Talks to Tenant Manager only through its bundled tpa-mcp tools, with every other tool denied. For the agent runner only.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Learnteq Solutions"
+      },
+      "homepage": "https://ignitenx.com",
+      "category": "productivity",
+      "tags": [
+        "tenant-manager",
+        "provisioning",
+        "agent",
+        "mcp"
+      ]
     }
   ]
 }

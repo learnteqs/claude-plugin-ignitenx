@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tpa-mcp": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/tpa-mcp.mjs"]
+    }
+  }
+}
