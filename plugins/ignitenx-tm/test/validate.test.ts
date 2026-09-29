@@ -13,6 +13,7 @@ const CONTRACT = JSON.parse(readFileSync(new URL("./fixtures/request-v1.json", i
 const THEMES = ["default", "catppuccin", "Bubblegum", "Doom 64", "Twitter", "Notebook", "Kodama Grove", "Vercel"];
 const SOURCE = CONTRACT.sourceText as string;
 const long = (n: number) => "a".repeat(n);
+const cps = (...codes: number[]) => String.fromCodePoint(...codes);
 const absent = () => ({ value: null, source: "absent", confidence: 0, evidence: [] });
 const stated = (value: unknown, quote = "Acme Learning Pvt Ltd") => ({
   value,
@@ -397,6 +398,17 @@ describe("rules mirrored from TM", () => {
     ["protocol-relative link in the summary", { summary: "See //acme.in/x" }, "summary", "free_text"],
     ["summary with a JWT", { summary: `Token eyJ${long(10)}.${long(10)}.${long(10)}` }, "summary", "secret_in_value"],
     ["summary with an env password", { summary: "DB_PASSWORD=hunter22" }, "summary", "secret_in_value"],
+    ["summary with a text selector", { summary: `Great${cps(0xfe00)}` }, "summary", "free_text"],
+    ["summary with an emoji selector after a letter", { summary: `Great${cps(0xfe0f)}` }, "summary", "free_text"],
+    ["summary with an emoji selector after =", { summary: `Rating =${cps(0xfe0f)}` }, "summary", "free_text"],
+    ["summary with an emoji selector after a digit", { summary: `Floor 7${cps(0xfe0f)}` }, "summary", "free_text"],
+    ["title with a grapheme joiner", { "fields.title.value": `Ac${cps(0x34f)}me` }, "fields.title.value", "free_text"],
+    [
+      "note with a Hangul filler",
+      { flags: [{ code: "other", field: "", note: `see${cps(0x3164)}` }] },
+      "flags[0].note",
+      "free_text",
+    ],
     ["source that is only hidden characters", { sourceText: "\u200b\u200d\u2066 \n" }, "sourceText", "source_empty"],
     ["source too long", { sourceText: long(50001) }, "sourceText", "source_too_long"],
     [
@@ -489,6 +501,8 @@ describe("rules mirrored from TM", () => {
     ["fields.adminEmail", "priya.n@acmelearning.in\r", "invalid_format"],
     ["fields.timeZone", "Asia/Kolkata\ufeff", "invalid_time_zone"],
     ["fields.timeZone", "UTC\u{e0100}", "invalid_time_zone"],
+    ["fields.tenantKey", `acme${cps(0x3164)}-learning`, "invalid_format"],
+    ["fields.timeZone", `Asia/Kolkata${cps(0xfe0f)}`, "invalid_time_zone"],
   ])("%s with a hidden character, %j, is TM's %s", (field, value, code) => {
     expect(errorsOf({ [`${field}.value`]: value })).toEqual([{ path: `${field}.value`, code }]);
   });
@@ -564,6 +578,8 @@ describe("never stricter than TM", () => {
     ["label that ends like a scheme", { "fields.title.value": "Hotel: Grand Profile: Acme" }],
     ["title in Tamil", { "fields.title.value": "அகரம் கல்வி நிறுவனம்" }],
     ["summary in Tamil", { summary: "வணக்கம்" }],
+    ["summary with an emoji", { summary: `Great ${cps(0x2764, 0xfe0f)}` }],
+    ["summary with a keycap", { summary: `Press ${cps(0x31, 0xfe0f, 0x20e3)}` }],
     ["budget of 0", { "fields.subscription.monthlyBudget": stated(0) }],
     ["budget of 1,000,000", { "fields.subscription.monthlyBudget": stated(1000000) }],
     ["budget of 0.29", { "fields.subscription.monthlyBudget": stated(0.29) }],
@@ -631,6 +647,10 @@ describe("never stricter than TM", () => {
     ["zone with a space", { "fields.timeZone.value": "Asia/Kolkata " }],
     ["zone path traversal", { "fields.timeZone.value": "../../etc/passwd" }],
     ["tenant key with a tab, which is not hidden", { "fields.tenantKey.value": "acme\tlearning" }],
+    [
+      "company id with a keycap, whose selector is not hidden",
+      { "fields.companyId.value": `RC-4471${cps(0x23, 0xfe0f, 0x20e3)}` },
+    ],
     ["tenant key with a lone surrogate", { "fields.tenantKey.value": "acme\ud800" }],
     ["email with a non-breaking space", { "fields.adminEmail.value": "priya\u00a0n@acme.in" }],
     ["email with a Cyrillic letter", { "fields.adminEmail.value": "priya.n@\u0430cme.in" }],

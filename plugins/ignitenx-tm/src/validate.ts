@@ -18,7 +18,7 @@ import {
   type FieldValue,
   type SubmitInput,
 } from "./spec.js";
-import { charCount, containsSecret, findQuote, hiddenClass, normalizeText, redact, textCode } from "./text.js";
+import { charCount, containsHidden, containsSecret, findQuote, normalizeText, redact, textCode } from "./text.js";
 import type { FieldError } from "./tm-client.js";
 
 type Fields = SubmitInput["fields"];
@@ -36,9 +36,9 @@ const listRule = (allowed: (o: AgentOptions) => string[]) => (o: AgentOptions, v
   allowed(o).includes(v as string) ? "" : "not_in_options";
 
 // Tenant key, company id, admin user name, the emails and the time zone are left to TM, which has the tables they need.
-// None of TM's formats for them allows a hidden character, so only that is refused here, with TM's code.
-const hiddenRule = (code: string) => (_: AgentOptions, v: FieldValue) =>
-  [...(v as string)].some((ch) => hiddenClass(ch.codePointAt(0) ?? 0) !== "") ? code : "";
+// TM's formats for them are ASCII, so none allows a character TM's freeText calls hidden; only that is refused here,
+// with TM's code.
+const hiddenRule = (code: string) => (_: AgentOptions, v: FieldValue) => (containsHidden(v as string) ? code : "");
 
 const always = () => true;
 

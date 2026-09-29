@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 import {
   REDACTED,
   charCount,
+  containsHidden,
   containsSecret,
   findQuote,
   hiddenClass,
@@ -21,7 +22,7 @@ import {
 
 // Byte copy of TM's spec/testdata/text-vectors.json; TM pins the same hash, so update both together.
 const VECTORS_URL = new URL("./fixtures/text-vectors.json", import.meta.url);
-const VECTORS_SHA256 = "sha256:a229d937f85835fac0815f752bcd8fb0caa65473a510415ef499dd03c6844833";
+const VECTORS_SHA256 = "sha256:7b05d93157d9ed272b6f72ffe0eb03d4a17bbd2940a6250df43d8d95a055d7de";
 
 interface Vector {
   name: string;
@@ -30,6 +31,7 @@ interface Vector {
   stripped?: Record<string, number>;
   redacted?: string;
   redactions?: Record<string, number>;
+  freeText?: boolean;
 }
 
 const raw = readFileSync(VECTORS_URL);
@@ -37,6 +39,9 @@ const vectors = JSON.parse(raw.toString("utf8")) as Vector[];
 const countMap = (counts: Count[]) => Object.fromEntries(counts.map((c) => [c.code, c.count]));
 const long = (n: number) => "a".repeat(n);
 const tmk = `tmk_0123456789abcdef_${"A".repeat(43)}`;
+const cps = (...codes: number[]) => String.fromCodePoint(...codes);
+const VS16 = cps(0xfe0f);
+const KEYCAP = cps(0x20e3);
 
 describe("text vectors shared with TM", () => {
   test("the fixture is TM's file, byte for byte", () => {
@@ -52,9 +57,35 @@ describe("text vectors shared with TM", () => {
     expect(r.text).toBe(v.redacted ?? v.normalised);
     expect(countMap(r.redactions)).toEqual(v.redactions ?? {});
     expect(normalizeText(n.text)).toEqual({ text: n.text, stripped: [] });
+    expect(normalizeText(r.text)).toEqual({ text: r.text, stripped: [] });
     const rr = redactRaw(v.input);
     expect(normalizeText(rr.text)).toEqual({ text: r.text, stripped: n.stripped });
     expect(rr.redactions).toEqual(r.redactions);
+    expect(typeof v.freeText, "every vector states TM's freeText verdict").toBe("boolean");
+    expect(isFreeText(v.input)).toBe(v.freeText);
+  });
+
+  // The vector that lists every emoji base must list exactly the port's, so a port with another table fails it.
+  test("the emoji bases are exactly those the vector lists", () => {
+    const every = vectors.find((v) => v.name === "every emoji base keeps its selector");
+    expect(every).toBeDefined();
+    const selected = (s: string) => {
+      const out = new Set<number>();
+      for (let i = s.indexOf(VS16); i > 0; i = s.indexOf(VS16, i + 1)) {
+        out.add(s.codePointAt(i - (s.charCodeAt(i - 1) >= 0xdc00 && s.charCodeAt(i - 1) <= 0xdfff ? 2 : 1)) ?? 0);
+      }
+      return [...out].sort((a, b) => a - b);
+    };
+    const listed = selected(every?.input ?? "");
+    expect(listed.length).toBe(219);
+    // Every code point in turn, after a space and before VS16 and U+20E3: VS16 stays exactly after an emoji base.
+    const probe: string[] = [];
+    for (let cp = 0; cp <= 0x10ffff; cp++) {
+      if (cp < 0xd800 || cp > 0xdfff) {
+        probe.push(" ", String.fromCodePoint(cp), VS16, KEYCAP);
+      }
+    }
+    expect(selected(normalizeText(probe.join("")).text)).toEqual(listed);
   });
 });
 
@@ -92,6 +123,36 @@ describe("normalizeText", () => {
   test("counts code points", () => {
     expect(charCount("a\u{1f600}வ்")).toBe(4);
     expect(charCount("\ud800")).toBe(1);
+  });
+
+  // As TM's TestHiddenCoversIgnorables: the runtime's Unicode tables decide nothing in text.ts, but whatever version
+  // this one has, each of its format, default-ignorable and variation-selector characters but VS16 is in the table.
+  test("hides every format and default-ignorable character this runtime knows, but VS16", () => {
+    const ignorable = /^[\p{Default_Ignorable_Code_Point}\p{Variation_Selector}\p{Cf}]$/u;
+    const missed: string[] = [];
+    for (let c = 0; c <= 0x10ffff; c++) {
+      const known = (c < 0xd800 || c > 0xdfff) && c !== 0xfe0f && ignorable.test(cps(c));
+      if (known && hiddenClass(c) === "") {
+        missed.push(c.toString(16));
+      }
+    }
+    expect(missed, `Unicode ${process.versions.unicode}`).toEqual([]);
+  });
+
+  test.each<[string, string, boolean]>([
+    ["an emoji base keeps its selector", cps(0x2764, 0xfe0f), false],
+    ["a base beyond the BMP keeps its selector", cps(0x1f170, 0xfe0f), false],
+    ["a keycap keeps its selector", cps(0x23, 0xfe0f, 0x20e3), false],
+    ["a selector after a letter is hidden", cps(0x41, 0xfe0f), true],
+    ["a selector after an emoji-style emoji is hidden", cps(0x2705, 0xfe0f), true],
+    ["a second selector is hidden", cps(0x2764, 0xfe0f, 0xfe0f), true],
+    ["a digit's selector before another mark is hidden", cps(0x37, 0xfe0f, 0x20dd), true],
+    ["a leading selector is hidden", cps(0xfe0f, 0x2764), true],
+    ["a Hangul filler is hidden", cps(0x41, 0x3164), true],
+    ["a CR is a control", cps(0x61, 0x0d, 0x62), true],
+    ["a tab is not hidden", cps(0x61, 0x09, 0x62), false],
+  ])("containsHidden: %s", (_, s, hidden) => {
+    expect(containsHidden(s)).toBe(hidden);
   });
 });
 
@@ -171,6 +232,22 @@ describe("redactRaw", () => {
       `${REDACTED}\u00ad next`,
     ],
     ["a lone surrogate becomes U+FFFD", "a\ud800b password=hunter22", `a\ufffdb password=${REDACTED}`],
+    [
+      "a selector the secret takes goes with the token",
+      `Key sk-${long(20)}${cps(0x31, 0xfe0f, 0x20e3)} ok`,
+      `Key ${REDACTED}${KEYCAP} ok`,
+    ],
+    [
+      "a removed selector inside a secret follows the token",
+      `password: Hunt${VS16}er2 ok`,
+      `password: ${REDACTED}${VS16} ok`,
+    ],
+    [
+      "a kept selector past a removed character goes with the token, and the removed one follows it",
+      `sk-${long(20)}${cps(0x31, 0x200b, 0xfe0f, 0x20e3)}`,
+      `${REDACTED}${cps(0x200b, 0x20e3)}`,
+    ],
+    ["a selector the secret leaves stays where it was", `AKIAIOSFODNN7EXAMPLE${VS16} x`, `${REDACTED}${VS16} x`],
   ])("%s", (_, input, want) => {
     const r = redactRaw(input);
     expect(r.text).toBe(want);
@@ -197,10 +274,33 @@ describe("redactRaw", () => {
     expect(redact(normalizeText(input).text).text).toBe(`x ${REDACTED}${REDACTED}`);
   });
 
+  // TM's FuzzNormalizeText and FuzzRedact properties, on the seeds TM added with the VS16 rule.
+  test.each([
+    cps(0x2764, 0xfe0f, 0xfe0f, 0x41, 0xfe0f, 0x20, 0x31, 0xfe0f, 0x20e3, 0x34f, 0xfe00),
+    cps(0x23, 0xfe0f, 0x20e3, 0x31, 0xfe0f, 0x200b, 0x20e3, 0x37, 0xfe0f, 0x3d, 0xfe0f, 0x17b4, 0xe0f41, 0x600),
+    `Key sk-${long(20)}${cps(0x31, 0xfe0f, 0x20e3)} ok`,
+    `?sig=abcdefghijtoken=${VS16}abcd`,
+  ])("TM's fuzz seed %j keeps every property", (input) => {
+    const n = normalizeText(input);
+    expect(containsHidden(n.text)).toBe(false);
+    expect(normalizeText(n.text)).toEqual({ text: n.text, stripped: [] });
+    const red = redact(n.text);
+    expect(normalizeText(red.text)).toEqual({ text: red.text, stripped: [] });
+    expect(containsSecret(redact(input).text)).toBe(false);
+    const r = redactRaw(input);
+    expect({ ...normalizeText(r.text), redactions: r.redactions }).toEqual({
+      text: red.text,
+      stripped: n.stripped,
+      redactions: red.redactions,
+    });
+  });
+
   test("agrees with redact on normalised text for generated inputs", () => {
     const failures: { input: string; got: unknown; want: unknown }[] = [];
     let redacted = 0;
     let hiddenInside = 0;
+    let selectorsTaken = 0;
+    const selectors = (s: string) => s.split(VS16).length;
     for (const input of generate(4000, 20260929)) {
       const r = redactRaw(input);
       const n = normalizeText(input);
@@ -212,10 +312,12 @@ describe("redactRaw", () => {
       }
       redacted += red.redactions.length > 0 ? 1 : 0;
       hiddenInside += hiddenAfterToken(r.text) ? 1 : 0;
+      selectorsTaken += selectors(red.text) < selectors(n.text) ? 1 : 0;
     }
     expect(failures.slice(0, 3)).toEqual([]);
     expect(redacted).toBeGreaterThan(2000);
     expect(hiddenInside).toBeGreaterThan(1000);
+    expect(selectorsTaken).toBeGreaterThan(100);
   });
 });
 
@@ -279,7 +381,7 @@ const hiddenAfterToken = (s: string) =>
   s
     .split(REDACTED)
     .slice(1)
-    .some((rest) => !rest.startsWith("\r") && hiddenClass(rest.codePointAt(0) ?? 0x20) !== "");
+    .some((rest) => !rest.startsWith("\r") && containsHidden(`]${cps(rest.codePointAt(0) ?? 0x20)}`));
 
 // generate builds pasted-looking text from TM's secret shapes, then sprinkles hidden characters and CRs anywhere,
 // including inside secrets, so a secret's raw range holds characters that normalising removes.
@@ -305,7 +407,19 @@ function generate(count: number, seed: number): string[] {
   const SPACES = [" ", " ", "\t", "\n", "\u00a0", "\u1680", "\u2003", "\u2028", "\u202f", "\u205f", "\u3000"];
   const BREAKS = ["\r", "\r\n", "\n\r", "\r\r\n", "\u000b", "\u0085"];
   const LABELS = ["password", "Password", "PWD", "passwd", "secret", "api_key", "api key", "apiKey", "token"];
-  const hidden = () =>
+  // Both sides of every edge of the hidden table, and emoji bases of each kind with VS16 and U+20E3 around them.
+  const EDGES: string[] = [];
+  for (let c = 1; c <= 0x10ffff; c++) {
+    if ((c < 0xd800 || c > 0xe000) && hiddenClass(c) !== hiddenClass(c - 1)) {
+      EDGES.push(cps(c - 1), cps(c));
+    }
+  }
+  const BASES = [0x23, 0x2a, 0x30, 0x31, 0x39, 0xa9, 0x2139, 0x2764, 0x2b07, 0x3030, 0x1f170, 0x1f321, 0x1f6f3];
+  const NOT_BASES = [0x41, 0x3d, 0x2192, 0x2605, 0x2705, 0x231a, 0x1f44d, 0x1f600, 0x1fae9, 0x20e3, 0xfe0f];
+  const emoji = () =>
+    cps(pick(int(2) === 0 ? BASES : NOT_BASES)) +
+    pick(["", VS16, VS16 + VS16, VS16 + KEYCAP, KEYCAP, `${VS16}${hidden()}${KEYCAP}`, `${hidden()}${VS16}${KEYCAP}`]);
+  const hidden = (): string =>
     pick([
       () => cp(0x00, 0x1f),
       () => cp(0x7f, 0x9f),
@@ -316,6 +430,8 @@ function generate(count: number, seed: number): string[] {
       () => cp(0x2060, 0x2064),
       () => cp(0xe0000, 0xe007f),
       () => cp(0xe0100, 0xe01ef),
+      () => pick(EDGES),
+      () => pick([VS16, VS16, VS16 + KEYCAP]),
       () => pick(["\ufe0f", "\u2065", "\u180d", "\u{e0080}", "\u2029"]),
     ])();
   const labelled = () =>
@@ -352,6 +468,10 @@ function generate(count: number, seed: number): string[] {
       secret,
       secret,
       () => Array.from({ length: 2 + int(3) }, secret).join(""),
+      emoji,
+      emoji,
+      () => secret() + emoji(),
+      () => `${secret()}${pick(["", "1", "#"])}${VS16}${KEYCAP}`,
       () => cp(0x20, 0x2fff),
       () => cp(0x10000, 0x1ffff),
       () => pick(["\ud800", "\udc00"]),

@@ -2,17 +2,20 @@
   {
     "name": "CRLF and lone CR become LF",
     "input": "a\r\nb\rc",
-    "normalised": "a\nb\nc"
+    "normalised": "a\nb\nc",
+    "freeText": false
   },
   {
     "name": "surrounding whitespace is trimmed",
     "input": "  \n hello \t\n",
-    "normalised": "hello"
+    "normalised": "hello",
+    "freeText": false
   },
   {
     "name": "tab and newline inside are kept",
     "input": "a\tb\nc",
-    "normalised": "a\tb\nc"
+    "normalised": "a\tb\nc",
+    "freeText": false
   },
   {
     "name": "bidi controls are removed",
@@ -20,7 +23,8 @@
     "normalised": "abcdcba",
     "stripped": {
       "bidi_control": 2
-    }
+    },
+    "freeText": false
   },
   {
     "name": "bidi isolates and marks are removed",
@@ -28,7 +32,8 @@
     "normalised": "abcde",
     "stripped": {
       "bidi_control": 5
-    }
+    },
+    "freeText": false
   },
   {
     "name": "zero-width characters are removed",
@@ -36,7 +41,8 @@
     "normalised": "password",
     "stripped": {
       "zero_width": 3
-    }
+    },
+    "freeText": false
   },
   {
     "name": "soft hyphen and invisible operators are removed",
@@ -44,7 +50,8 @@
     "normalised": "password",
     "stripped": {
       "zero_width": 2
-    }
+    },
+    "freeText": false
   },
   {
     "name": "tag characters (ASCII smuggling) are removed",
@@ -52,7 +59,8 @@
     "normalised": "hi",
     "stripped": {
       "tag_character": 3
-    }
+    },
+    "freeText": false
   },
   {
     "name": "supplementary variation selectors are removed",
@@ -60,12 +68,14 @@
     "normalised": "xy",
     "stripped": {
       "variation_selector": 2
-    }
+    },
+    "freeText": false
   },
   {
     "name": "the emoji variation selector is kept",
     "input": "\u2764\ufe0f thanks",
-    "normalised": "\u2764\ufe0f thanks"
+    "normalised": "\u2764\ufe0f thanks",
+    "freeText": true
   },
   {
     "name": "C0, DEL and C1 controls are removed",
@@ -73,22 +83,26 @@
     "normalised": "abcde",
     "stripped": {
       "control": 5
-    }
+    },
+    "freeText": false
   },
   {
     "name": "no-break space is kept",
     "input": "a\u00a0b",
-    "normalised": "a\u00a0b"
+    "normalised": "a\u00a0b",
+    "freeText": false
   },
   {
     "name": "Tamil text is unchanged",
     "input": "\u0bb5\u0ba3\u0b95\u0bcd\u0b95\u0bae\u0bcd \u0b95\u0bc1\u0bb4\u0bc1",
-    "normalised": "\u0bb5\u0ba3\u0b95\u0bcd\u0b95\u0bae\u0bcd \u0b95\u0bc1\u0bb4\u0bc1"
+    "normalised": "\u0bb5\u0ba3\u0b95\u0bcd\u0b95\u0bae\u0bcd \u0b95\u0bc1\u0bb4\u0bc1",
+    "freeText": true
   },
   {
     "name": "no Unicode normal form is applied",
     "input": "cafe\u0301",
-    "normalised": "cafe\u0301"
+    "normalised": "cafe\u0301",
+    "freeText": true
   },
   {
     "name": "password line: only the value is redacted",
@@ -97,7 +111,8 @@
     "redacted": "Temp password: [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "password value on the next line",
@@ -106,7 +121,8 @@
     "redacted": "Password:\n  [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "hidden characters can't split a secret",
@@ -118,7 +134,8 @@
     "redacted": "password: [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "TM agent key",
@@ -127,7 +144,8 @@
     "redacted": "old key [redacted] here",
     "redactions": {
       "tm_agent_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "LMS API key",
@@ -136,7 +154,8 @@
     "redacted": "[redacted]",
     "redactions": {
       "lms_api_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "JWT",
@@ -145,7 +164,8 @@
     "redacted": "Bearer [redacted]",
     "redactions": {
       "jwt": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "credentials in a URL: only the password",
@@ -154,7 +174,8 @@
     "redacted": "mongodb://admin:[redacted]@db.example.com:27017/x",
     "redactions": {
       "url_credentials": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "Azure account key",
@@ -163,7 +184,8 @@
     "redacted": "AccountName=acme;AccountKey=[redacted];EndpointSuffix=core.windows.net",
     "redactions": {
       "azure_account_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "SAS signature",
@@ -172,7 +194,8 @@
     "redacted": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=[redacted]",
     "redactions": {
       "azure_sas": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "PEM private key block",
@@ -181,7 +204,8 @@
     "redacted": "key:\n[redacted]\nbye",
     "redactions": {
       "private_key": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "PEM private key cut off",
@@ -190,7 +214,8 @@
     "redacted": "[redacted]",
     "redactions": {
       "private_key": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "Anthropic and OpenAI keys",
@@ -200,7 +225,8 @@
     "redactions": {
       "anthropic_key": 1,
       "openai_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "AWS access key",
@@ -209,7 +235,8 @@
     "redacted": "[redacted]",
     "redactions": {
       "aws_access_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "GitHub token",
@@ -218,7 +245,8 @@
     "redacted": "[redacted]",
     "redactions": {
       "github_token": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "a key inside a password line counts once",
@@ -227,27 +255,32 @@
     "redacted": "token: [redacted]",
     "redactions": {
       "jwt": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "already redacted by the plugin",
     "input": "password: [redacted]",
-    "normalised": "password: [redacted]"
+    "normalised": "password: [redacted]",
+    "freeText": true
   },
   {
     "name": "prose about passwords is not a secret",
     "input": "The password policy is strict; token count: 42",
-    "normalised": "The password policy is strict; token count: 42"
+    "normalised": "The password policy is strict; token count: 42",
+    "freeText": true
   },
   {
     "name": "a short value is not a secret",
     "input": "Secret: yes",
-    "normalised": "Secret: yes"
+    "normalised": "Secret: yes",
+    "freeText": true
   },
   {
     "name": "sk- inside a word is not a key",
     "input": "task-abcdefghijklmnopqrstuvwxyz",
-    "normalised": "task-abcdefghijklmnopqrstuvwxyz"
+    "normalised": "task-abcdefghijklmnopqrstuvwxyz",
+    "freeText": true
   },
   {
     "name": "a blank label doesn't take the next label as its value",
@@ -256,7 +289,8 @@
     "redacted": "API key:\nPassword: [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "blank labels across a blank line",
@@ -265,7 +299,8 @@
     "redacted": "Token:\n\nPassword: [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": false
   },
   {
     "name": "a label with no space before its value",
@@ -274,7 +309,8 @@
     "redacted": "password:[redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "environment-style name",
@@ -283,7 +319,8 @@
     "redacted": "DB_PASSWORD=[redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "camel-case name",
@@ -292,7 +329,8 @@
     "redacted": "adminPassword: [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "client secret and access token",
@@ -301,7 +339,8 @@
     "redacted": "client_secret=[redacted] access_token: [redacted]",
     "redactions": {
       "password_line": 2
-    }
+    },
+    "freeText": true
   },
   {
     "name": "JSON password: the rest of the value token goes too",
@@ -310,7 +349,8 @@
     "redacted": "{\"password\": [redacted]",
     "redactions": {
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "a label glued to a fixed-length key",
@@ -320,7 +360,8 @@
     "redactions": {
       "tm_agent_key": 1,
       "password_line": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "a second pass finds a key the first one exposed",
@@ -330,11 +371,447 @@
     "redactions": {
       "lms_api_key": 1,
       "openai_key": 1
-    }
+    },
+    "freeText": true
   },
   {
     "name": "words that only start like a label",
     "input": "Passwords: must be long. Tokenization: on. Secretary: Priya",
-    "normalised": "Passwords: must be long. Tokenization: on. Secretary: Priya"
+    "normalised": "Passwords: must be long. Tokenization: on. Secretary: Priya",
+    "freeText": true
+  },
+  {
+    "name": "text variation selectors are removed",
+    "input": "x\ufe00y\ufe0ez",
+    "normalised": "xyz",
+    "stripped": {
+      "variation_selector": 2
+    },
+    "freeText": false
+  },
+  {
+    "name": "the emoji selector after a letter is removed",
+    "input": "A\ufe0fB",
+    "normalised": "AB",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a run of emoji selectors keeps only the first",
+    "input": "\u2764\ufe0f\ufe0f ok",
+    "normalised": "\u2764\ufe0f ok",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a keycap keeps its selector",
+    "input": "Press 1\ufe0f\u20e3",
+    "normalised": "Press 1\ufe0f\u20e3",
+    "freeText": true
+  },
+  {
+    "name": "the information emoji keeps its selector",
+    "input": "\u2139\ufe0f note",
+    "normalised": "\u2139\ufe0f note",
+    "freeText": true
+  },
+  {
+    "name": "selector-encoded text is removed",
+    "input": "Thanks\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f",
+    "normalised": "Thanks",
+    "stripped": {
+      "variation_selector": 16
+    },
+    "freeText": false
+  },
+  {
+    "name": "Mongolian free variation selectors are removed",
+    "input": "a\u180bb\u180dc\u180f",
+    "normalised": "abc",
+    "stripped": {
+      "variation_selector": 3
+    },
+    "freeText": false
+  },
+  {
+    "name": "the grapheme joiner and Hangul fillers are removed",
+    "input": "a\u034fb\u115fc\u1160d\u3164e\uffa0f",
+    "normalised": "abcdef",
+    "stripped": {
+      "zero_width": 5
+    },
+    "freeText": false
+  },
+  {
+    "name": "deprecated format, annotation, shorthand and musical controls are removed",
+    "input": "a\u206ab\u206fc\ufff9d\ufffbe\ud82f\udca0f\ud82f\udca3g\ud834\udd73h\ud834\udd7ai",
+    "normalised": "abcdefghi",
+    "stripped": {
+      "zero_width": 8
+    },
+    "freeText": false
+  },
+  {
+    "name": "a grapheme joiner can't split a secret",
+    "input": "pass\u034fword: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector at the start is removed",
+    "input": "\ufe0fHello",
+    "normalised": "Hello",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a leading space is removed",
+    "input": " \ufe0fHello",
+    "normalised": "Hello",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a removed character still follows its emoji",
+    "input": "\u2764\u200b\ufe0f",
+    "normalised": "\u2764\ufe0f",
+    "stripped": {
+      "zero_width": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a line break is removed",
+    "input": "\u2764\r\n\ufe0fok",
+    "normalised": "\u2764\nok",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a trailing space is removed",
+    "input": "ok \u2764 \ufe0f",
+    "normalised": "ok \u2764",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a letter inside a password is removed",
+    "input": "password: Hunt\ufe0fer2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "symbols with no emoji style lose the selector",
+    "input": "=\ufe0f +\ufe0f $\ufe0f ^\ufe0f \u2192\ufe0f \u2605\ufe0f \ud83d\udc4d\ud83c\udffb\ufe0f",
+    "normalised": "= + $ ^ \u2192 \u2605 \ud83d\udc4d\ud83c\udffb",
+    "stripped": {
+      "variation_selector": 7
+    },
+    "freeText": false
+  },
+  {
+    "name": "a newer emoji with no emoji-style sequence loses the selector",
+    "input": "Tired \ud83e\udee9\ufe0f of waiting",
+    "normalised": "Tired \ud83e\udee9 of waiting",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "keycaps keep their selector",
+    "input": "#\ufe0f\u20e3 *\ufe0f\u20e3 0\ufe0f\u20e3 9\ufe0f\u20e3",
+    "normalised": "#\ufe0f\u20e3 *\ufe0f\u20e3 0\ufe0f\u20e3 9\ufe0f\u20e3",
+    "freeText": true
+  },
+  {
+    "name": "a digit's selector without a keycap is removed",
+    "input": "Room 7\ufe0f is free",
+    "normalised": "Room 7 is free",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a keycap selector is judged by the next raw character",
+    "input": "1\ufe0f\u200b\u20e3",
+    "normalised": "1\u20e3",
+    "stripped": {
+      "zero_width": 1,
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "every emoji base keeps its selector",
+    "input": "#\ufe0f\u20e3*\ufe0f\u20e30\ufe0f\u20e31\ufe0f\u20e32\ufe0f\u20e33\ufe0f\u20e34\ufe0f\u20e35\ufe0f\u20e36\ufe0f\u20e37\ufe0f\u20e38\ufe0f\u20e39\ufe0f\u20e3\u00a9\ufe0f\u00ae\ufe0f\u203c\ufe0f\u2049\ufe0f\u2122\ufe0f\u2139\ufe0f\u2194\ufe0f\u2195\ufe0f\u2196\ufe0f\u2197\ufe0f\u2198\ufe0f\u2199\ufe0f\u21a9\ufe0f\u21aa\ufe0f\u2328\ufe0f\u23cf\ufe0f\u23ed\ufe0f\u23ee\ufe0f\u23ef\ufe0f\u23f1\ufe0f\u23f2\ufe0f\u23f8\ufe0f\u23f9\ufe0f\u23fa\ufe0f\u24c2\ufe0f\u25aa\ufe0f\u25ab\ufe0f\u25b6\ufe0f\u25c0\ufe0f\u25fb\ufe0f\u25fc\ufe0f\u2600\ufe0f\u2601\ufe0f\u2602\ufe0f\u2603\ufe0f\u2604\ufe0f\u260e\ufe0f\u2611\ufe0f\u2618\ufe0f\u261d\ufe0f\u2620\ufe0f\u2622\ufe0f\u2623\ufe0f\u2626\ufe0f\u262a\ufe0f\u262e\ufe0f\u262f\ufe0f\u2638\ufe0f\u2639\ufe0f\u263a\ufe0f\u2640\ufe0f\u2642\ufe0f\u265f\ufe0f\u2660\ufe0f\u2663\ufe0f\u2665\ufe0f\u2666\ufe0f\u2668\ufe0f\u267b\ufe0f\u267e\ufe0f\u2692\ufe0f\u2694\ufe0f\u2695\ufe0f\u2696\ufe0f\u2697\ufe0f\u2699\ufe0f\u269b\ufe0f\u269c\ufe0f\u26a0\ufe0f\u26a7\ufe0f\u26b0\ufe0f\u26b1\ufe0f\u26c8\ufe0f\u26cf\ufe0f\u26d1\ufe0f\u26d3\ufe0f\u26e9\ufe0f\u26f0\ufe0f\u26f1\ufe0f\u26f4\ufe0f\u26f7\ufe0f\u26f8\ufe0f\u26f9\ufe0f\u2702\ufe0f\u2708\ufe0f\u2709\ufe0f\u270c\ufe0f\u270d\ufe0f\u270f\ufe0f\u2712\ufe0f\u2714\ufe0f\u2716\ufe0f\u271d\ufe0f\u2721\ufe0f\u2733\ufe0f\u2734\ufe0f\u2744\ufe0f\u2747\ufe0f\u2763\ufe0f\u2764\ufe0f\u27a1\ufe0f\u2934\ufe0f\u2935\ufe0f\u2b05\ufe0f\u2b06\ufe0f\u2b07\ufe0f\u3030\ufe0f\u303d\ufe0f\u3297\ufe0f\u3299\ufe0f\ud83c\udd70\ufe0f\ud83c\udd71\ufe0f\ud83c\udd7e\ufe0f\ud83c\udd7f\ufe0f\ud83c\ude02\ufe0f\ud83c\ude37\ufe0f\ud83c\udf21\ufe0f\ud83c\udf24\ufe0f\ud83c\udf25\ufe0f\ud83c\udf26\ufe0f\ud83c\udf27\ufe0f\ud83c\udf28\ufe0f\ud83c\udf29\ufe0f\ud83c\udf2a\ufe0f\ud83c\udf2b\ufe0f\ud83c\udf2c\ufe0f\ud83c\udf36\ufe0f\ud83c\udf7d\ufe0f\ud83c\udf96\ufe0f\ud83c\udf97\ufe0f\ud83c\udf99\ufe0f\ud83c\udf9a\ufe0f\ud83c\udf9b\ufe0f\ud83c\udf9e\ufe0f\ud83c\udf9f\ufe0f\ud83c\udfcb\ufe0f\ud83c\udfcc\ufe0f\ud83c\udfcd\ufe0f\ud83c\udfce\ufe0f\ud83c\udfd4\ufe0f\ud83c\udfd5\ufe0f\ud83c\udfd6\ufe0f\ud83c\udfd7\ufe0f\ud83c\udfd8\ufe0f\ud83c\udfd9\ufe0f\ud83c\udfda\ufe0f\ud83c\udfdb\ufe0f\ud83c\udfdc\ufe0f\ud83c\udfdd\ufe0f\ud83c\udfde\ufe0f\ud83c\udfdf\ufe0f\ud83c\udff3\ufe0f\ud83c\udff5\ufe0f\ud83c\udff7\ufe0f\ud83d\udc3f\ufe0f\ud83d\udc41\ufe0f\ud83d\udcfd\ufe0f\ud83d\udd49\ufe0f\ud83d\udd4a\ufe0f\ud83d\udd6f\ufe0f\ud83d\udd70\ufe0f\ud83d\udd73\ufe0f\ud83d\udd74\ufe0f\ud83d\udd75\ufe0f\ud83d\udd76\ufe0f\ud83d\udd77\ufe0f\ud83d\udd78\ufe0f\ud83d\udd79\ufe0f\ud83d\udd87\ufe0f\ud83d\udd8a\ufe0f\ud83d\udd8b\ufe0f\ud83d\udd8c\ufe0f\ud83d\udd8d\ufe0f\ud83d\udd90\ufe0f\ud83d\udda5\ufe0f\ud83d\udda8\ufe0f\ud83d\uddb1\ufe0f\ud83d\uddb2\ufe0f\ud83d\uddbc\ufe0f\ud83d\uddc2\ufe0f\ud83d\uddc3\ufe0f\ud83d\uddc4\ufe0f\ud83d\uddd1\ufe0f\ud83d\uddd2\ufe0f\ud83d\uddd3\ufe0f\ud83d\udddc\ufe0f\ud83d\udddd\ufe0f\ud83d\uddde\ufe0f\ud83d\udde1\ufe0f\ud83d\udde3\ufe0f\ud83d\udde8\ufe0f\ud83d\uddef\ufe0f\ud83d\uddf3\ufe0f\ud83d\uddfa\ufe0f\ud83d\udecb\ufe0f\ud83d\udecd\ufe0f\ud83d\udece\ufe0f\ud83d\udecf\ufe0f\ud83d\udee0\ufe0f\ud83d\udee1\ufe0f\ud83d\udee2\ufe0f\ud83d\udee3\ufe0f\ud83d\udee4\ufe0f\ud83d\udee5\ufe0f\ud83d\udee9\ufe0f\ud83d\udef0\ufe0f\ud83d\udef3\ufe0f",
+    "normalised": "#\ufe0f\u20e3*\ufe0f\u20e30\ufe0f\u20e31\ufe0f\u20e32\ufe0f\u20e33\ufe0f\u20e34\ufe0f\u20e35\ufe0f\u20e36\ufe0f\u20e37\ufe0f\u20e38\ufe0f\u20e39\ufe0f\u20e3\u00a9\ufe0f\u00ae\ufe0f\u203c\ufe0f\u2049\ufe0f\u2122\ufe0f\u2139\ufe0f\u2194\ufe0f\u2195\ufe0f\u2196\ufe0f\u2197\ufe0f\u2198\ufe0f\u2199\ufe0f\u21a9\ufe0f\u21aa\ufe0f\u2328\ufe0f\u23cf\ufe0f\u23ed\ufe0f\u23ee\ufe0f\u23ef\ufe0f\u23f1\ufe0f\u23f2\ufe0f\u23f8\ufe0f\u23f9\ufe0f\u23fa\ufe0f\u24c2\ufe0f\u25aa\ufe0f\u25ab\ufe0f\u25b6\ufe0f\u25c0\ufe0f\u25fb\ufe0f\u25fc\ufe0f\u2600\ufe0f\u2601\ufe0f\u2602\ufe0f\u2603\ufe0f\u2604\ufe0f\u260e\ufe0f\u2611\ufe0f\u2618\ufe0f\u261d\ufe0f\u2620\ufe0f\u2622\ufe0f\u2623\ufe0f\u2626\ufe0f\u262a\ufe0f\u262e\ufe0f\u262f\ufe0f\u2638\ufe0f\u2639\ufe0f\u263a\ufe0f\u2640\ufe0f\u2642\ufe0f\u265f\ufe0f\u2660\ufe0f\u2663\ufe0f\u2665\ufe0f\u2666\ufe0f\u2668\ufe0f\u267b\ufe0f\u267e\ufe0f\u2692\ufe0f\u2694\ufe0f\u2695\ufe0f\u2696\ufe0f\u2697\ufe0f\u2699\ufe0f\u269b\ufe0f\u269c\ufe0f\u26a0\ufe0f\u26a7\ufe0f\u26b0\ufe0f\u26b1\ufe0f\u26c8\ufe0f\u26cf\ufe0f\u26d1\ufe0f\u26d3\ufe0f\u26e9\ufe0f\u26f0\ufe0f\u26f1\ufe0f\u26f4\ufe0f\u26f7\ufe0f\u26f8\ufe0f\u26f9\ufe0f\u2702\ufe0f\u2708\ufe0f\u2709\ufe0f\u270c\ufe0f\u270d\ufe0f\u270f\ufe0f\u2712\ufe0f\u2714\ufe0f\u2716\ufe0f\u271d\ufe0f\u2721\ufe0f\u2733\ufe0f\u2734\ufe0f\u2744\ufe0f\u2747\ufe0f\u2763\ufe0f\u2764\ufe0f\u27a1\ufe0f\u2934\ufe0f\u2935\ufe0f\u2b05\ufe0f\u2b06\ufe0f\u2b07\ufe0f\u3030\ufe0f\u303d\ufe0f\u3297\ufe0f\u3299\ufe0f\ud83c\udd70\ufe0f\ud83c\udd71\ufe0f\ud83c\udd7e\ufe0f\ud83c\udd7f\ufe0f\ud83c\ude02\ufe0f\ud83c\ude37\ufe0f\ud83c\udf21\ufe0f\ud83c\udf24\ufe0f\ud83c\udf25\ufe0f\ud83c\udf26\ufe0f\ud83c\udf27\ufe0f\ud83c\udf28\ufe0f\ud83c\udf29\ufe0f\ud83c\udf2a\ufe0f\ud83c\udf2b\ufe0f\ud83c\udf2c\ufe0f\ud83c\udf36\ufe0f\ud83c\udf7d\ufe0f\ud83c\udf96\ufe0f\ud83c\udf97\ufe0f\ud83c\udf99\ufe0f\ud83c\udf9a\ufe0f\ud83c\udf9b\ufe0f\ud83c\udf9e\ufe0f\ud83c\udf9f\ufe0f\ud83c\udfcb\ufe0f\ud83c\udfcc\ufe0f\ud83c\udfcd\ufe0f\ud83c\udfce\ufe0f\ud83c\udfd4\ufe0f\ud83c\udfd5\ufe0f\ud83c\udfd6\ufe0f\ud83c\udfd7\ufe0f\ud83c\udfd8\ufe0f\ud83c\udfd9\ufe0f\ud83c\udfda\ufe0f\ud83c\udfdb\ufe0f\ud83c\udfdc\ufe0f\ud83c\udfdd\ufe0f\ud83c\udfde\ufe0f\ud83c\udfdf\ufe0f\ud83c\udff3\ufe0f\ud83c\udff5\ufe0f\ud83c\udff7\ufe0f\ud83d\udc3f\ufe0f\ud83d\udc41\ufe0f\ud83d\udcfd\ufe0f\ud83d\udd49\ufe0f\ud83d\udd4a\ufe0f\ud83d\udd6f\ufe0f\ud83d\udd70\ufe0f\ud83d\udd73\ufe0f\ud83d\udd74\ufe0f\ud83d\udd75\ufe0f\ud83d\udd76\ufe0f\ud83d\udd77\ufe0f\ud83d\udd78\ufe0f\ud83d\udd79\ufe0f\ud83d\udd87\ufe0f\ud83d\udd8a\ufe0f\ud83d\udd8b\ufe0f\ud83d\udd8c\ufe0f\ud83d\udd8d\ufe0f\ud83d\udd90\ufe0f\ud83d\udda5\ufe0f\ud83d\udda8\ufe0f\ud83d\uddb1\ufe0f\ud83d\uddb2\ufe0f\ud83d\uddbc\ufe0f\ud83d\uddc2\ufe0f\ud83d\uddc3\ufe0f\ud83d\uddc4\ufe0f\ud83d\uddd1\ufe0f\ud83d\uddd2\ufe0f\ud83d\uddd3\ufe0f\ud83d\udddc\ufe0f\ud83d\udddd\ufe0f\ud83d\uddde\ufe0f\ud83d\udde1\ufe0f\ud83d\udde3\ufe0f\ud83d\udde8\ufe0f\ud83d\uddef\ufe0f\ud83d\uddf3\ufe0f\ud83d\uddfa\ufe0f\ud83d\udecb\ufe0f\ud83d\udecd\ufe0f\ud83d\udece\ufe0f\ud83d\udecf\ufe0f\ud83d\udee0\ufe0f\ud83d\udee1\ufe0f\ud83d\udee2\ufe0f\ud83d\udee3\ufe0f\ud83d\udee4\ufe0f\ud83d\udee5\ufe0f\ud83d\udee9\ufe0f\ud83d\udef0\ufe0f\ud83d\udef3\ufe0f",
+    "freeText": true
+  },
+  {
+    "name": "a selector can't split an AWS key",
+    "input": "AKIAIOSFODNN7\ufe0fEXAMPLE",
+    "normalised": "AKIAIOSFODNN7EXAMPLE",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "redacted": "[redacted]",
+    "redactions": {
+      "aws_access_key": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a selector after a digit can't split a TM agent key",
+    "input": "Agent key tmk_0\ufe0f123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "normalised": "Agent key tmk_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "redacted": "Agent key [redacted]",
+    "redactions": {
+      "tm_agent_key": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+17B4 can't split a secret",
+    "input": "pass\u17b4word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+2065 can't split a secret",
+    "input": "pass\u2065word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+FFF0 can't split a secret",
+    "input": "pass\ufff0word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+E0080 can't split a secret",
+    "input": "pass\udb40\udc80word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "tag_character": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+E01F0 can't split a secret",
+    "input": "pass\udb40\uddf0word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "tag_character": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+E0F41 can't split a secret",
+    "input": "pass\udb43\udf41word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "tag_character": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "U+0600 can't split a secret",
+    "input": "pass\u0600word: Hunter2Hunter2",
+    "normalised": "password: Hunter2Hunter2",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a secret takes the selector after it",
+    "input": "Key sk-aaaaaaaaaaaaaaaaaaaa1\ufe0f\u20e3 ok",
+    "normalised": "Key sk-aaaaaaaaaaaaaaaaaaaa1\ufe0f\u20e3 ok",
+    "redacted": "Key [redacted]\u20e3 ok",
+    "redactions": {
+      "openai_key": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "an emoji that is already emoji-style loses the selector",
+    "input": "\u2705\ufe0f \ud83d\udc4d\ufe0f \u2764\ufe0f",
+    "normalised": "\u2705 \ud83d\udc4d \u2764\ufe0f",
+    "stripped": {
+      "variation_selector": 2
+    },
+    "freeText": false
+  },
+  {
+    "name": "controls from VT to US are removed",
+    "input": "a\u000bb\fc\u001bd\u001fe",
+    "normalised": "abcde",
+    "stripped": {
+      "control": 4
+    },
+    "freeText": false
+  },
+  {
+    "name": "keycap bases lose the selector without a keycap",
+    "input": "#\ufe0f *\ufe0f 0\ufe0f 9\ufe0f",
+    "normalised": "# * 0 9",
+    "stripped": {
+      "variation_selector": 4
+    },
+    "freeText": false
+  },
+  {
+    "name": "a keycap mark after a letter doesn't keep the selector",
+    "input": "A\ufe0f\u20e3",
+    "normalised": "A\u20e3",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "only the keycap mark keeps a digit's selector",
+    "input": "1\ufe0f\u20dd",
+    "normalised": "1\u20dd",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "an AWS key takes the selector after it",
+    "input": "id AKIAIOSFODNN7EXAMP12\ufe0f\u20e3 end",
+    "normalised": "id AKIAIOSFODNN7EXAMP12\ufe0f\u20e3 end",
+    "redacted": "id [redacted]\u20e3 end",
+    "redactions": {
+      "aws_access_key": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain company name is free text",
+    "input": "Acme Learning Pvt Ltd",
+    "normalised": "Acme Learning Pvt Ltd",
+    "freeText": true
+  },
+  {
+    "name": "a company name that is a domain is free text",
+    "input": "Naukri.com",
+    "normalised": "Naukri.com",
+    "freeText": true
+  },
+  {
+    "name": "markup is not free text",
+    "input": "Acme <b>Learning</b>",
+    "normalised": "Acme <b>Learning</b>",
+    "freeText": false
+  },
+  {
+    "name": "a link is not free text",
+    "input": "Acme https://acme.example",
+    "normalised": "Acme https://acme.example",
+    "freeText": false
+  },
+  {
+    "name": "a link with no scheme is not free text",
+    "input": "Acme zoom.us/j/8123",
+    "normalised": "Acme zoom.us/j/8123",
+    "freeText": false
+  },
+  {
+    "name": "an untrimmed value is not free text",
+    "input": " Acme",
+    "normalised": "Acme",
+    "freeText": false
+  },
+  {
+    "name": "an emoji is free text",
+    "input": "Great \u2764\ufe0f",
+    "normalised": "Great \u2764\ufe0f",
+    "freeText": true
+  },
+  {
+    "name": "a keycap is free text",
+    "input": "Press 1\ufe0f\u20e3",
+    "normalised": "Press 1\ufe0f\u20e3",
+    "freeText": true
+  },
+  {
+    "name": "a selector after a symbol with no emoji style is not free text",
+    "input": "Rating =\ufe0f",
+    "normalised": "Rating =",
+    "stripped": {
+      "variation_selector": 1
+    },
+    "freeText": false
   }
 ]

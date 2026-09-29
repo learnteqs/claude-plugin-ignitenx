@@ -552,7 +552,8 @@ const CASES: Case[] = [
         { code: "bidi_control", count: 4 },
         { code: "zero_width", count: 3 },
         { code: "tag_character", count: 45 },
-        { code: "variation_selector", count: 1 },
+        // U+E0101, and the VS16 after a full stop, which is no emoji base.
+        { code: "variation_selector", count: 2 },
       ]);
       expect(raw).not.toContain("prod-pg-2");
       expect(body.fields.title.evidence).toEqual(["Coastal Care Hospitals"]);

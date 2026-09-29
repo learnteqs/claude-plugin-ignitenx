@@ -23962,27 +23962,215 @@ function limit(value) {
 
 // src/text.ts
 var REDACTED = "[redacted]";
-var HIDDEN_CLASSES = ["control", "bidi_control", "zero_width", "tag_character", "variation_selector"];
+var CONTROL = "control";
+var BIDI_CONTROL = "bidi_control";
+var ZERO_WIDTH = "zero_width";
+var TAG_CHARACTER = "tag_character";
+var VARIATION_SELECTOR = "variation_selector";
+var HIDDEN_CLASSES = [CONTROL, BIDI_CONTROL, ZERO_WIDTH, TAG_CHARACTER, VARIATION_SELECTOR];
+var HIDDEN_RANGES = [
+  [0, 8, CONTROL],
+  [11, 31, CONTROL],
+  [127, 159, CONTROL],
+  [173, 173, ZERO_WIDTH],
+  [847, 847, ZERO_WIDTH],
+  [1536, 1541, ZERO_WIDTH],
+  [1564, 1564, BIDI_CONTROL],
+  [1757, 1757, ZERO_WIDTH],
+  [1807, 1807, ZERO_WIDTH],
+  [2192, 2193, ZERO_WIDTH],
+  [2274, 2274, ZERO_WIDTH],
+  [4447, 4448, ZERO_WIDTH],
+  [6068, 6069, ZERO_WIDTH],
+  [6155, 6157, VARIATION_SELECTOR],
+  [6158, 6158, ZERO_WIDTH],
+  [6159, 6159, VARIATION_SELECTOR],
+  [8203, 8205, ZERO_WIDTH],
+  [8206, 8207, BIDI_CONTROL],
+  [8234, 8238, BIDI_CONTROL],
+  [8288, 8293, ZERO_WIDTH],
+  [8294, 8297, BIDI_CONTROL],
+  [8298, 8303, ZERO_WIDTH],
+  [12644, 12644, ZERO_WIDTH],
+  [65024, 65038, VARIATION_SELECTOR],
+  [65279, 65279, ZERO_WIDTH],
+  [65440, 65440, ZERO_WIDTH],
+  [65520, 65531, ZERO_WIDTH],
+  [69821, 69821, ZERO_WIDTH],
+  [69837, 69837, ZERO_WIDTH],
+  [78896, 78911, ZERO_WIDTH],
+  [113824, 113827, ZERO_WIDTH],
+  [119155, 119162, ZERO_WIDTH],
+  [917504, 917759, TAG_CHARACTER],
+  [917760, 917999, VARIATION_SELECTOR],
+  [918e3, 921599, TAG_CHARACTER]
+];
+var EMOJI_BASES = [
+  [35, 35],
+  [42, 42],
+  [48, 57],
+  [169, 169],
+  [174, 174],
+  [8252, 8252],
+  [8265, 8265],
+  [8482, 8482],
+  [8505, 8505],
+  [8596, 8601],
+  [8617, 8618],
+  [9e3, 9e3],
+  [9167, 9167],
+  [9197, 9199],
+  [9201, 9202],
+  [9208, 9210],
+  [9410, 9410],
+  [9642, 9643],
+  [9654, 9654],
+  [9664, 9664],
+  [9723, 9724],
+  [9728, 9732],
+  [9742, 9742],
+  [9745, 9745],
+  [9752, 9752],
+  [9757, 9757],
+  [9760, 9760],
+  [9762, 9763],
+  [9766, 9766],
+  [9770, 9770],
+  [9774, 9775],
+  [9784, 9786],
+  [9792, 9792],
+  [9794, 9794],
+  [9823, 9824],
+  [9827, 9827],
+  [9829, 9830],
+  [9832, 9832],
+  [9851, 9851],
+  [9854, 9854],
+  [9874, 9874],
+  [9876, 9879],
+  [9881, 9881],
+  [9883, 9884],
+  [9888, 9888],
+  [9895, 9895],
+  [9904, 9905],
+  [9928, 9928],
+  [9935, 9935],
+  [9937, 9937],
+  [9939, 9939],
+  [9961, 9961],
+  [9968, 9969],
+  [9972, 9972],
+  [9975, 9977],
+  [9986, 9986],
+  [9992, 9993],
+  [9996, 9997],
+  [9999, 9999],
+  [10002, 10002],
+  [10004, 10004],
+  [10006, 10006],
+  [10013, 10013],
+  [10017, 10017],
+  [10035, 10036],
+  [10052, 10052],
+  [10055, 10055],
+  [10083, 10084],
+  [10145, 10145],
+  [10548, 10549],
+  [11013, 11015],
+  [12336, 12336],
+  [12349, 12349],
+  [12951, 12951],
+  [12953, 12953],
+  [127344, 127345],
+  [127358, 127359],
+  [127490, 127490],
+  [127543, 127543],
+  [127777, 127777],
+  [127780, 127788],
+  [127798, 127798],
+  [127869, 127869],
+  [127894, 127895],
+  [127897, 127899],
+  [127902, 127903],
+  [127947, 127950],
+  [127956, 127967],
+  [127987, 127987],
+  [127989, 127989],
+  [127991, 127991],
+  [128063, 128063],
+  [128065, 128065],
+  [128253, 128253],
+  [128329, 128330],
+  [128367, 128368],
+  [128371, 128377],
+  [128391, 128391],
+  [128394, 128397],
+  [128400, 128400],
+  [128421, 128421],
+  [128424, 128424],
+  [128433, 128434],
+  [128444, 128444],
+  [128450, 128452],
+  [128465, 128467],
+  [128476, 128478],
+  [128481, 128481],
+  [128483, 128483],
+  [128488, 128488],
+  [128495, 128495],
+  [128499, 128499],
+  [128506, 128506],
+  [128715, 128715],
+  [128717, 128719],
+  [128736, 128741],
+  [128745, 128745],
+  [128752, 128752],
+  [128755, 128755]
+];
+function rangeAt(ranges, cp) {
+  let lo = 0;
+  let hi = ranges.length;
+  while (lo < hi) {
+    const mid = lo + hi >>> 1;
+    if (ranges[mid][1] >= cp) {
+      hi = mid;
+    } else {
+      lo = mid + 1;
+    }
+  }
+  const r = ranges[lo];
+  return r !== void 0 && r[0] <= cp ? r : void 0;
+}
 function hiddenClass(cp) {
-  if (cp === 9 || cp === 10) {
-    return "";
+  return rangeAt(HIDDEN_RANGES, cp)?.[2] ?? "";
+}
+var VS16 = 65039;
+var KEYCAP = 8419;
+var emojiBase = (cp) => rangeAt(EMOJI_BASES, cp) !== void 0;
+var keycapBase = (cp) => cp === 35 || cp === 42 || cp >= 48 && cp <= 57;
+function hiddenAt(prev, cp, next) {
+  if (cp !== VS16) {
+    return hiddenClass(cp);
   }
-  if (cp < 32 || cp === 127 || cp >= 128 && cp <= 159) {
-    return "control";
+  return !emojiBase(prev) || keycapBase(prev) && next !== KEYCAP ? VARIATION_SELECTOR : "";
+}
+function scan(s, lines, visit) {
+  let prev = -1;
+  for (let i = 0; i < s.length; ) {
+    let cp = s.codePointAt(i) ?? 0;
+    let n = width(cp);
+    if (lines && cp === 13) {
+      cp = 10;
+      n = s.charCodeAt(i + 1) === 10 ? 2 : 1;
+    }
+    const hidden = hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
+    if (hidden === "") {
+      prev = cp;
+    }
+    if (visit(i, n, hidden) === true) {
+      return;
+    }
+    i += n;
   }
-  if (cp >= 8234 && cp <= 8238 || cp >= 8294 && cp <= 8297 || cp === 8206 || cp === 8207 || cp === 1564) {
-    return "bidi_control";
-  }
-  if (cp >= 8203 && cp <= 8205 || cp >= 8288 && cp <= 8292 || cp === 65279 || cp === 173 || cp === 6158) {
-    return "zero_width";
-  }
-  if (cp >= 917504 && cp <= 917631) {
-    return "tag_character";
-  }
-  if (cp >= 917760 && cp <= 917999) {
-    return "variation_selector";
-  }
-  return "";
 }
 function spaceCode(cp) {
   switch (cp) {
@@ -24033,17 +24221,25 @@ function bump(counts2, code2) {
   counts2.set(code2, (counts2.get(code2) ?? 0) + 1);
 }
 function normalizeText(s) {
+  const raw = wellFormed(s);
   const counts2 = /* @__PURE__ */ new Map();
   let out = "";
-  for (const ch of wellFormed(s).replaceAll("\r\n", "\n").replaceAll("\r", "\n")) {
-    const c = hiddenClass(ch.codePointAt(0) ?? 0);
-    if (c !== "") {
-      bump(counts2, c);
-      continue;
+  scan(raw, true, (at, n, hidden) => {
+    if (hidden !== "") {
+      bump(counts2, hidden);
+    } else {
+      out += raw.charCodeAt(at) === 13 ? "\n" : raw.slice(at, at + n);
     }
-    out += ch;
-  }
+  });
   return { text: trimSpace(out), stripped: ordered(HIDDEN_CLASSES, counts2) };
+}
+function containsHidden(s) {
+  let found = false;
+  scan(wellFormed(s), false, (_at, _n, hidden) => {
+    found = hidden !== "";
+    return found;
+  });
+  return found;
 }
 var WS = "\\t\\n \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
 var FOLDS = { k: "\\u212a", s: "\\u017f" };
@@ -24126,7 +24322,7 @@ function findSecrets(s) {
   SECRET_PATTERNS.forEach((p, priority) => {
     for (const [start, end] of p.find(s)) {
       if (s.slice(start, end) !== REDACTED) {
-        spans.push({ start, end, priority, code: p.code });
+        spans.push({ start, end: s.charCodeAt(end) === VS16 ? end + 1 : end, priority, code: p.code });
       }
     }
   });
@@ -24168,35 +24364,30 @@ function mapNormalized(raw) {
   let text = "";
   const from = [];
   const to = [];
-  for (let i = 0; i < raw.length; ) {
-    const cp = raw.codePointAt(i) ?? 0;
-    if (cp === 13) {
-      const n2 = raw.charCodeAt(i + 1) === 10 ? 2 : 1;
+  const removed = new Uint8Array(raw.length);
+  scan(raw, true, (at, n, hidden) => {
+    if (hidden !== "") {
+      removed.fill(1, at, at + n);
+    } else if (raw.charCodeAt(at) === 13) {
       text += "\n";
-      from.push(i);
-      to.push(i + n2);
-      i += n2;
-      continue;
-    }
-    const n = width(cp);
-    if (hiddenClass(cp) === "") {
-      text += raw.slice(i, i + n);
-      for (let k = i; k < i + n; k++) {
+      from.push(at);
+      to.push(at + n);
+    } else {
+      text += raw.slice(at, at + n);
+      for (let k = at; k < at + n; k++) {
         from.push(k);
         to.push(k + 1);
       }
     }
-    i += n;
-  }
+  });
   const [start, end] = trimBounds(text);
-  return { text: text.slice(start, end), from: from.slice(start, end), to: to.slice(start, end) };
+  return { text: text.slice(start, end), from: from.slice(start, end), to: to.slice(start, end), removed };
 }
-var hiddenIn = (s) => [...s].filter((ch) => ch !== "\r" && hiddenClass(ch.codePointAt(0) ?? 0) !== "").join("");
 function redactRaw(raw) {
   raw = wellFormed(raw);
   const counts2 = /* @__PURE__ */ new Map();
   for (let pass = 0; pass < MAX_REDACT_PASSES; pass++) {
-    const { text, from, to } = mapNormalized(raw);
+    const { text, from, to, removed } = mapNormalized(raw);
     const spans = findSecrets(text);
     if (spans.length === 0) {
       break;
@@ -24206,7 +24397,10 @@ function redactRaw(raw) {
     for (const sp of spans) {
       const start = from[sp.start] ?? raw.length;
       const end = to[sp.end - 1] ?? start;
-      out += raw.slice(last, start) + REDACTED + hiddenIn(raw.slice(start, end));
+      out += raw.slice(last, start) + REDACTED;
+      for (let k = start; k < end; k++) {
+        out += removed[k] === 1 ? raw[k] : "";
+      }
       last = end;
       bump(counts2, sp.code);
     }
@@ -24258,12 +24452,13 @@ function isFreeText(s) {
   if (s !== trimSpace(s)) {
     return false;
   }
-  for (const ch of s) {
-    if (hiddenClass(ch.codePointAt(0) ?? 0) !== "" || !PRINTABLE.test(ch) || ch === "<" || ch === ">" || ch === "`") {
-      return false;
-    }
-  }
-  return !LINK.test(s);
+  let free = true;
+  scan(s, false, (at, n, hidden) => {
+    const ch = s.slice(at, at + n);
+    free = hidden === "" && PRINTABLE.test(ch) && ch !== "<" && ch !== ">" && ch !== "`";
+    return !free;
+  });
+  return free && !LINK.test(s);
 }
 function textCode(s, maxChars) {
   const n = charCount(s);
@@ -24457,7 +24652,7 @@ import { randomBytes } from "node:crypto";
 // src/validate.ts
 var textRule = (maxChars) => (_, v) => textCode(v, maxChars);
 var listRule = (allowed) => (o, v) => allowed(o).includes(v) ? "" : "not_in_options";
-var hiddenRule = (code2) => (_, v) => [...v].some((ch) => hiddenClass(ch.codePointAt(0) ?? 0) !== "") ? code2 : "";
+var hiddenRule = (code2) => (_, v) => containsHidden(v) ? code2 : "";
 var always = () => true;
 var RULES = {
   "fields.tenantKey": { check: hiddenRule("invalid_format") },

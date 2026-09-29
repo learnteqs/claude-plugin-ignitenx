@@ -8,28 +8,137 @@ export interface Count {
   count: number;
 }
 
-const HIDDEN_CLASSES = ["control", "bidi_control", "zero_width", "tag_character", "variation_selector"];
+const CONTROL = "control";
+const BIDI_CONTROL = "bidi_control";
+const ZERO_WIDTH = "zero_width";
+const TAG_CHARACTER = "tag_character";
+const VARIATION_SELECTOR = "variation_selector";
+const HIDDEN_CLASSES = [CONTROL, BIDI_CONTROL, ZERO_WIDTH, TAG_CHARACTER, VARIATION_SELECTOR];
+
+// TM's two tables are literal, as here, so that no runtime's Unicode version decides what is hidden.
+// TM's hiddenRanges, sorted: every control but tab and LF and every format or default-ignorable character but VS16.
+const HIDDEN_RANGES: [number, number, string][] = [
+  [0x0000, 0x0008, CONTROL],
+  [0x000b, 0x001f, CONTROL],
+  [0x007f, 0x009f, CONTROL],
+  [0x00ad, 0x00ad, ZERO_WIDTH],
+  [0x034f, 0x034f, ZERO_WIDTH],
+  [0x0600, 0x0605, ZERO_WIDTH],
+  [0x061c, 0x061c, BIDI_CONTROL],
+  [0x06dd, 0x06dd, ZERO_WIDTH],
+  [0x070f, 0x070f, ZERO_WIDTH],
+  [0x0890, 0x0891, ZERO_WIDTH],
+  [0x08e2, 0x08e2, ZERO_WIDTH],
+  [0x115f, 0x1160, ZERO_WIDTH],
+  [0x17b4, 0x17b5, ZERO_WIDTH],
+  [0x180b, 0x180d, VARIATION_SELECTOR],
+  [0x180e, 0x180e, ZERO_WIDTH],
+  [0x180f, 0x180f, VARIATION_SELECTOR],
+  [0x200b, 0x200d, ZERO_WIDTH],
+  [0x200e, 0x200f, BIDI_CONTROL],
+  [0x202a, 0x202e, BIDI_CONTROL],
+  [0x2060, 0x2065, ZERO_WIDTH],
+  [0x2066, 0x2069, BIDI_CONTROL],
+  [0x206a, 0x206f, ZERO_WIDTH],
+  [0x3164, 0x3164, ZERO_WIDTH],
+  [0xfe00, 0xfe0e, VARIATION_SELECTOR],
+  [0xfeff, 0xfeff, ZERO_WIDTH],
+  [0xffa0, 0xffa0, ZERO_WIDTH],
+  [0xfff0, 0xfffb, ZERO_WIDTH],
+  [0x110bd, 0x110bd, ZERO_WIDTH],
+  [0x110cd, 0x110cd, ZERO_WIDTH],
+  [0x13430, 0x1343f, ZERO_WIDTH],
+  [0x1bca0, 0x1bca3, ZERO_WIDTH],
+  [0x1d173, 0x1d17a, ZERO_WIDTH],
+  [0xe0000, 0xe00ff, TAG_CHARACTER],
+  [0xe0100, 0xe01ef, VARIATION_SELECTOR],
+  [0xe01f0, 0xe0fff, TAG_CHARACTER],
+];
+
+// TM's emojiBases, sorted: they take VS16 in Unicode 16.0's emoji-variation-sequences.txt and are text-style by default
+// (Emoji_Presentation=No), so VS16 visibly changes them.
+// 219 code points in 119 ranges.
+const EMOJI_BASES: [number, number][] = [
+  [0x0023, 0x0023], [0x002a, 0x002a], [0x0030, 0x0039], [0x00a9, 0x00a9], [0x00ae, 0x00ae], [0x203c, 0x203c],
+  [0x2049, 0x2049], [0x2122, 0x2122], [0x2139, 0x2139], [0x2194, 0x2199], [0x21a9, 0x21aa], [0x2328, 0x2328],
+  [0x23cf, 0x23cf], [0x23ed, 0x23ef], [0x23f1, 0x23f2], [0x23f8, 0x23fa], [0x24c2, 0x24c2], [0x25aa, 0x25ab],
+  [0x25b6, 0x25b6], [0x25c0, 0x25c0], [0x25fb, 0x25fc], [0x2600, 0x2604], [0x260e, 0x260e], [0x2611, 0x2611],
+  [0x2618, 0x2618], [0x261d, 0x261d], [0x2620, 0x2620], [0x2622, 0x2623], [0x2626, 0x2626], [0x262a, 0x262a],
+  [0x262e, 0x262f], [0x2638, 0x263a], [0x2640, 0x2640], [0x2642, 0x2642], [0x265f, 0x2660], [0x2663, 0x2663],
+  [0x2665, 0x2666], [0x2668, 0x2668], [0x267b, 0x267b], [0x267e, 0x267e], [0x2692, 0x2692], [0x2694, 0x2697],
+  [0x2699, 0x2699], [0x269b, 0x269c], [0x26a0, 0x26a0], [0x26a7, 0x26a7], [0x26b0, 0x26b1], [0x26c8, 0x26c8],
+  [0x26cf, 0x26cf], [0x26d1, 0x26d1], [0x26d3, 0x26d3], [0x26e9, 0x26e9], [0x26f0, 0x26f1], [0x26f4, 0x26f4],
+  [0x26f7, 0x26f9], [0x2702, 0x2702], [0x2708, 0x2709], [0x270c, 0x270d], [0x270f, 0x270f], [0x2712, 0x2712],
+  [0x2714, 0x2714], [0x2716, 0x2716], [0x271d, 0x271d], [0x2721, 0x2721], [0x2733, 0x2734], [0x2744, 0x2744],
+  [0x2747, 0x2747], [0x2763, 0x2764], [0x27a1, 0x27a1], [0x2934, 0x2935], [0x2b05, 0x2b07], [0x3030, 0x3030],
+  [0x303d, 0x303d], [0x3297, 0x3297], [0x3299, 0x3299], [0x1f170, 0x1f171], [0x1f17e, 0x1f17f], [0x1f202, 0x1f202],
+  [0x1f237, 0x1f237], [0x1f321, 0x1f321], [0x1f324, 0x1f32c], [0x1f336, 0x1f336], [0x1f37d, 0x1f37d],
+  [0x1f396, 0x1f397], [0x1f399, 0x1f39b], [0x1f39e, 0x1f39f], [0x1f3cb, 0x1f3ce], [0x1f3d4, 0x1f3df],
+  [0x1f3f3, 0x1f3f3], [0x1f3f5, 0x1f3f5], [0x1f3f7, 0x1f3f7], [0x1f43f, 0x1f43f], [0x1f441, 0x1f441],
+  [0x1f4fd, 0x1f4fd], [0x1f549, 0x1f54a], [0x1f56f, 0x1f570], [0x1f573, 0x1f579], [0x1f587, 0x1f587],
+  [0x1f58a, 0x1f58d], [0x1f590, 0x1f590], [0x1f5a5, 0x1f5a5], [0x1f5a8, 0x1f5a8], [0x1f5b1, 0x1f5b2],
+  [0x1f5bc, 0x1f5bc], [0x1f5c2, 0x1f5c4], [0x1f5d1, 0x1f5d3], [0x1f5dc, 0x1f5de], [0x1f5e1, 0x1f5e1],
+  [0x1f5e3, 0x1f5e3], [0x1f5e8, 0x1f5e8], [0x1f5ef, 0x1f5ef], [0x1f5f3, 0x1f5f3], [0x1f5fa, 0x1f5fa],
+  [0x1f6cb, 0x1f6cb], [0x1f6cd, 0x1f6cf], [0x1f6e0, 0x1f6e5], [0x1f6e9, 0x1f6e9], [0x1f6f0, 0x1f6f0],
+  [0x1f6f3, 0x1f6f3],
+];
+
+// rangeAt is the range of sorted, disjoint ranges that holds cp, found as TM's sort.Search finds it.
+function rangeAt<T extends [number, number, ...unknown[]]>(ranges: T[], cp: number): T | undefined {
+  let lo = 0;
+  let hi = ranges.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if ((ranges[mid] as T)[1] >= cp) {
+      hi = mid;
+    } else {
+      lo = mid + 1;
+    }
+  }
+  const r = ranges[lo];
+  return r !== undefined && r[0] <= cp ? r : undefined;
+}
 
 export function hiddenClass(cp: number): string {
-  if (cp === 0x09 || cp === 0x0a) {
-    return "";
+  return rangeAt(HIDDEN_RANGES, cp)?.[2] ?? "";
+}
+
+const VS16 = 0xfe0f;
+const KEYCAP = 0x20e3;
+const emojiBase = (cp: number) => rangeAt(EMOJI_BASES, cp) !== undefined;
+const keycapBase = (cp: number) => cp === 0x23 || cp === 0x2a || (cp >= 0x30 && cp <= 0x39);
+
+// hiddenAt keeps VS16 only if prev (the last kept code point) is an emoji base and, for a keycap base, next (raw) is
+// U+20E3. Every other code point is hidden by its class alone.
+function hiddenAt(prev: number, cp: number, next: number): string {
+  if (cp !== VS16) {
+    return hiddenClass(cp);
   }
-  if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) {
-    return "control";
+  return !emojiBase(prev) || (keycapBase(prev) && next !== KEYCAP) ? VARIATION_SELECTOR : "";
+}
+
+// scan judges each code point of s in turn with hiddenAt and calls visit with its UTF-16 offset, its length and its
+// class, "" if kept; visit returns true to stop. With lines, a CR or CRLF is one kept LF, as normalizeText makes it
+// before judging (a next CR reads as the LF it becomes: only U+20E3 matters there); without, a CR is a control, as
+// TM's freeText sees it.
+function scan(s: string, lines: boolean, visit: (at: number, n: number, hidden: string) => boolean | void): void {
+  let prev = -1;
+  for (let i = 0; i < s.length; ) {
+    let cp = s.codePointAt(i) ?? 0;
+    let n = width(cp);
+    if (lines && cp === 0x0d) {
+      cp = 0x0a;
+      n = s.charCodeAt(i + 1) === 0x0a ? 2 : 1;
+    }
+    const hidden = hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
+    if (hidden === "") {
+      prev = cp;
+    }
+    if (visit(i, n, hidden) === true) {
+      return;
+    }
+    i += n;
   }
-  if ((cp >= 0x202a && cp <= 0x202e) || (cp >= 0x2066 && cp <= 0x2069) || cp === 0x200e || cp === 0x200f || cp === 0x061c) {
-    return "bidi_control";
-  }
-  if ((cp >= 0x200b && cp <= 0x200d) || (cp >= 0x2060 && cp <= 0x2064) || cp === 0xfeff || cp === 0x00ad || cp === 0x180e) {
-    return "zero_width";
-  }
-  if (cp >= 0xe0000 && cp <= 0xe007f) {
-    return "tag_character";
-  }
-  if (cp >= 0xe0100 && cp <= 0xe01ef) {
-    return "variation_selector";
-  }
-  return "";
 }
 
 // Every space is in the BMP, so code units can be tested directly.
@@ -96,17 +205,27 @@ function bump(counts: Map<string, number>, code: string): void {
 }
 
 export function normalizeText(s: string): { text: string; stripped: Count[] } {
+  const raw = wellFormed(s);
   const counts = new Map<string, number>();
   let out = "";
-  for (const ch of wellFormed(s).replaceAll("\r\n", "\n").replaceAll("\r", "\n")) {
-    const c = hiddenClass(ch.codePointAt(0) ?? 0);
-    if (c !== "") {
-      bump(counts, c);
-      continue;
+  scan(raw, true, (at, n, hidden) => {
+    if (hidden !== "") {
+      bump(counts, hidden);
+    } else {
+      out += raw.charCodeAt(at) === 0x0d ? "\n" : raw.slice(at, at + n);
     }
-    out += ch;
-  }
+  });
   return { text: trimSpace(out), stripped: ordered(HIDDEN_CLASSES, counts) };
+}
+
+// containsHidden reports whether s holds a character TM's freeText calls hidden (a CR is a control there).
+export function containsHidden(s: string): boolean {
+  let found = false;
+  scan(wellFormed(s), false, (_at, _n, hidden) => {
+    found = hidden !== "";
+    return found;
+  });
+  return found;
 }
 
 const WS = "\\t\\n \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
@@ -218,7 +337,8 @@ function findSecrets(s: string): Span[] {
   SECRET_PATTERNS.forEach((p, priority) => {
     for (const [start, end] of p.find(s)) {
       if (s.slice(start, end) !== REDACTED) {
-        spans.push({ start, end, priority, code: p.code });
+        // A VS16 after a secret goes with it: after the token it would be a hidden character.
+        spans.push({ start, end: s.charCodeAt(end) === VS16 ? end + 1 : end, priority, code: p.code });
       }
     }
   });
@@ -261,47 +381,41 @@ export function redact(s: string): { text: string; redactions: Count[] } {
   return { text: s, redactions: ordered(SECRET_KINDS, counts) };
 }
 
-// mapNormalized is normalizeText's text for well-formed raw, with the raw range [from, to) of each of its code units.
-function mapNormalized(raw: string): { text: string; from: number[]; to: number[] } {
+// mapNormalized is normalizeText's text for well-formed raw, with the raw range [from, to) of each of its code units,
+// and a mark on each raw code unit normalizeText removes.
+function mapNormalized(raw: string): { text: string; from: number[]; to: number[]; removed: Uint8Array } {
   let text = "";
   const from: number[] = [];
   const to: number[] = [];
-  for (let i = 0; i < raw.length; ) {
-    const cp = raw.codePointAt(i) ?? 0;
-    if (cp === 0x0d) {
-      const n = raw.charCodeAt(i + 1) === 0x0a ? 2 : 1;
+  const removed = new Uint8Array(raw.length);
+  scan(raw, true, (at, n, hidden) => {
+    if (hidden !== "") {
+      removed.fill(1, at, at + n);
+    } else if (raw.charCodeAt(at) === 0x0d) {
       text += "\n";
-      from.push(i);
-      to.push(i + n);
-      i += n;
-      continue;
-    }
-    const n = width(cp);
-    if (hiddenClass(cp) === "") {
-      text += raw.slice(i, i + n);
-      for (let k = i; k < i + n; k++) {
+      from.push(at);
+      to.push(at + n);
+    } else {
+      text += raw.slice(at, at + n);
+      for (let k = at; k < at + n; k++) {
         from.push(k);
         to.push(k + 1);
       }
     }
-    i += n;
-  }
+  });
   const [start, end] = trimBounds(text);
-  return { text: text.slice(start, end), from: from.slice(start, end), to: to.slice(start, end) };
+  return { text: text.slice(start, end), from: from.slice(start, end), to: to.slice(start, end), removed };
 }
 
-// A CR is never hidden: normalizeText turns it into LF first.
-const hiddenIn = (s: string) =>
-  [...s].filter((ch) => ch !== "\r" && hiddenClass(ch.codePointAt(0) ?? 0) !== "").join("");
-
-// redactRaw replaces in raw itself the secrets redact finds in normalizeText(raw). A replaced range keeps the hidden
-// characters it held, after the token, so normalising the result strips and counts the same characters and gives
-// redact's text.
+// redactRaw replaces in raw itself the secrets redact finds in normalizeText(raw). A replaced range keeps the characters
+// normalizeText removed from it, after the token, where each is still removed (a VS16 after "]" is), so normalising
+// the result strips and counts the same characters and gives redact's text. A VS16 a secret took is not one of them:
+// it was kept, and goes with the secret.
 export function redactRaw(raw: string): { text: string; redactions: Count[] } {
   raw = wellFormed(raw);
   const counts = new Map<string, number>();
   for (let pass = 0; pass < MAX_REDACT_PASSES; pass++) {
-    const { text, from, to } = mapNormalized(raw);
+    const { text, from, to, removed } = mapNormalized(raw);
     const spans = findSecrets(text);
     if (spans.length === 0) {
       break;
@@ -311,7 +425,10 @@ export function redactRaw(raw: string): { text: string; redactions: Count[] } {
     for (const sp of spans) {
       const start = from[sp.start] ?? raw.length;
       const end = to[sp.end - 1] ?? start;
-      out += raw.slice(last, start) + REDACTED + hiddenIn(raw.slice(start, end));
+      out += raw.slice(last, start) + REDACTED;
+      for (let k = start; k < end; k++) {
+        out += removed[k] === 1 ? raw[k] : "";
+      }
       last = end;
       bump(counts, sp.code);
     }
@@ -372,12 +489,13 @@ export function isFreeText(s: string): boolean {
   if (s !== trimSpace(s)) {
     return false;
   }
-  for (const ch of s) {
-    if (hiddenClass(ch.codePointAt(0) ?? 0) !== "" || !PRINTABLE.test(ch) || ch === "<" || ch === ">" || ch === "`") {
-      return false;
-    }
-  }
-  return !LINK.test(s);
+  let free = true;
+  scan(s, false, (at, n, hidden) => {
+    const ch = s.slice(at, at + n);
+    free = hidden === "" && PRINTABLE.test(ch) && ch !== "<" && ch !== ">" && ch !== "`";
+    return !free;
+  });
+  return free && !LINK.test(s);
 }
 
 export function textCode(s: string, maxChars: number): "" | "length" | "free_text" {
