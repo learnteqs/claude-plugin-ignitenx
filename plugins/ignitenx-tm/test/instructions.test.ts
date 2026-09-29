@@ -26,6 +26,8 @@ describe("instructions", () => {
       "must come from it",
       "placementPreview suggestions only",
       "Never put a password, key, token, URL",
+      "in any field or your reply",
+      "derive tenantKey from the name",
       "Call tpa_submit_request once",
       "fix only those, at most twice",
       "new session",
@@ -38,7 +40,7 @@ describe("instructions", () => {
   test("carry the email-thread rules", () => {
     for (const rule of [
       "email thread",
-      "sourceText is the thread as pasted",
+      "sourceText is the email thread as pasted",
       "drop only exact duplicate quoted history and signatures or disclaimers",
       "source_trimmed with a note",
       "latest confirmed value wins",
@@ -46,7 +48,7 @@ describe("instructions", () => {
       "not_yet_confirmed",
       "Client or requester statements beat internal staff",
       "assumed_value",
-      "this TM's environment",
+      "record this TM's",
       "multiple_requests with a note",
       "stage under_discussion",
       "meeting link",

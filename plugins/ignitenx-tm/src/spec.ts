@@ -121,6 +121,13 @@ const FIELDS_HELP =
   "quotes from sourceText), default (TM's default, confidence 1), chosen (where a field allows it), absent (value " +
   "null, confidence 0). confidence is 0-1 with at most 2 decimals; evidence is [] unless stated or derived.";
 
+const FLAG_HELP =
+  "Flag only what a reviewer must act on. A value worked out from the text (time zone from a city, tenant key from " +
+  "the name, a partner the text names) is source derived and needs no flag. assumed_value: only for a value just " +
+  "internal staff stated, or a partner chosen without evidence. missing_required: only for an empty tenantKey, " +
+  "title, partnerId, adminUserName, adminEmail, timeZone, subscription.planId or placement field; other empty " +
+  "fields need no flag. other: only when no code fits, with a note.";
+
 export const SubmitInputSchema = z.strictObject({
   sourceText: z.string().describe("The paste as given; only the trims the instructions allow"),
   summary: z.string().describe("Plain text for the reviewer, at most 500 characters, no links or markup"),
@@ -136,7 +143,10 @@ export const SubmitInputSchema = z.strictObject({
   }),
   fields: z
     .strictObject({
-      tenantKey: Text.describe("3-52 of a-z, 0-9 and single hyphens"),
+      tenantKey: Text.describe(
+        "3-52 of a-z, 0-9 and single hyphens. Not stated: derive it from the company name (lower-case, spaces to " +
+          "single hyphens), source derived, confidence about 0.6",
+      ),
       title: Text.describe("The company display name as written, at most 100"),
       pageTitle: Text.describe("At most 100"),
       idpDisplayName: Text.describe("At most 80"),
@@ -174,7 +184,7 @@ export const SubmitInputSchema = z.strictObject({
   flags: z
     .array(
       z.strictObject({
-        code: z.enum(FLAG_CODES),
+        code: z.enum(FLAG_CODES).describe(FLAG_HELP),
         field: z.enum(["", ...FIELD_PATHS]).describe("The field the flag is about, or \"\""),
         note: z.string().describe("At most 200; required for other, source_trimmed and multiple_requests"),
       }),
