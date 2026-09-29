@@ -15,6 +15,7 @@ import {
   normalizeText,
   redact,
   redactRaw,
+  redactedTexts,
   textCode,
   trimSpace,
   type Count,
@@ -415,6 +416,59 @@ describe("redactRaw", () => {
     expect(selectorsTaken).toBeGreaterThan(100);
     expect(quietTaken).toBeGreaterThan(1000);
   });
+});
+
+describe("redactedTexts", () => {
+  // rebuild replaces each text, in order, where it next occurs; that is where redact put its token when each text
+  // occurs once.
+  const rebuild = (s: string, texts: string[]) => {
+    let out = "";
+    let at = 0;
+    for (const t of texts) {
+      const i = s.indexOf(t, at);
+      out += `${s.slice(at, i)}${REDACTED}`;
+      at = i + t.length;
+    }
+    return out + s.slice(at);
+  };
+  const once = (s: string, texts: string[]) => texts.every((t) => s.indexOf(t) === s.lastIndexOf(t));
+
+  test.each<[string, string, string[]]>([
+    ["nothing to replace", "Acme Learning, password reset flow", []],
+    ["a label's value", "Admin password: Zenith@2026!\nThanks", ["Zenith@2026!"]],
+    ["only the password of a URL", "postgres://reporting:Rep0rtng2026@db.internal:5432/lms", ["Rep0rtng2026"]],
+    ["each secret in order", `Key: ${tmk}\nAKIAIOSFODNN7EXAMPLE and token=abcd`, [tmk, "AKIAIOSFODNN7EXAMPLE", "abcd"]],
+    ["a secret glued to an earlier one, found by a later pass", `x ${tmk}sk-proj-abcdefghijklmnopqrstuvwx`, [
+      tmk,
+      "sk-proj-abcdefghijklmnopqrstuvwx",
+    ]],
+    // Pass one replaces the signature, whose slash hid the URL's password; pass two then replaces that password
+    // with the token inside it.
+    ["a secret a later pass finds around an earlier token, whole", "x://u:?sig=abc/defghijklmnopqrs@host", [
+      "?sig=abc/defghijklmnopqrs",
+    ]],
+    ["a token already in the text", `password: ${REDACTED} and token: abcd`, ["abcd"]],
+  ])("%s", (_, s, texts) => {
+    expect(redactedTexts(s)).toEqual(texts);
+    expect(rebuild(s, texts)).toBe(redact(s).text);
+  });
+
+  test("are what redact replaces, for every vector and generated input", () => {
+    const failures: { input: string; texts: string[] }[] = [];
+    let checked = 0;
+    for (const input of [...vectors.map((v) => v.input), ...generate(4000, 20260930)]) {
+      const n = normalizeText(input).text;
+      const texts = redactedTexts(n);
+      if (texts.length > 0 && once(n, texts)) {
+        checked++;
+        if (rebuild(n, texts) !== redact(n).text) {
+          failures.push({ input, texts });
+        }
+      }
+    }
+    expect(failures.slice(0, 3)).toEqual([]);
+    expect(checked).toBeGreaterThan(1500);
+  }, 30_000);
 });
 
 describe("findQuote", () => {

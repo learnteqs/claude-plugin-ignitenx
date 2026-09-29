@@ -26,7 +26,10 @@ only the names of the model's own argument keys. The model does see the pasted t
 - an id or list value that isn't in the options;
 - a server other than TM's placement suggestion, so the pasted text can never pick one;
 - an evidence quote that isn't in the pasted text;
-- a password, key, token, connection string or URL in any value.
+- a password, key, token or connection string in any value, the summary or a flag note, including a secret the plugin
+  replaced in the paste and the model repeats without its label (section 3.4);
+- a link in a free-text value: the title, page title, IdP display name, industry, requested environment or region, the
+  summary or a flag note. Ids and emails aren't checked for links; they must match TM's formats.
 
 Before sending, it replaces every secret in the pasted text with `[redacted]`, the same way TM does, and sends the rest
 exactly as pasted. So hidden characters (zero-width, bidi and tag characters, and the like) still reach TM, which strips
@@ -264,12 +267,13 @@ A tool error names one of these codes, e.g. `Submit failed (daily_cap: …)`. Th
 | `already_submitted` | This process has recorded a request, or TM refused it as a conflict. | Start a new session. |
 | `too_many_attempts` | TM refused the spec 3 times. | Check the paste, then start a new session. |
 
-The field codes in an `invalid_spec` error are TM's own, except two that only the plugin gives:
+The field codes in an `invalid_spec` error are TM's own. Three rules are the plugin's own, which TM doesn't apply:
 
 | Field code | Path | Meaning |
 |---|---|---|
 | `not_preview_suggestion` | `fields.placement.<server>.value` | A server other than TM's placement suggestion. The agent uses the suggestion or leaves the field absent. |
 | `source_too_long_after_redaction` | `sourceText` | The paste is within the limit, but not once its secrets are replaced with `[redacted]`. Start a new session and paste only the part of the thread with the request. |
+| `secret_in_value` | `summary`, `flags[i].note`, `fields.<field>.value` | TM's code, which the plugin also gives when the text repeats a secret of 4 or more characters that it replaced in the paste, such as a password without its `Password:` label. TM can't check this, because it receives only the redacted paste. |
 
 ## 4. Run it on a dedicated runner
 

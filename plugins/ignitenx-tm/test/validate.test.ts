@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import { mapOptions, type AgentOptions } from "../src/options.js";
 import { FIELD_PATHS, SubmitInputSchema, type SubmitInput } from "../src/spec.js";
+import { containsSecret, redactedTexts } from "../src/text.js";
 import { decimals, validate } from "../src/validate.js";
 
 const CONTRACT = JSON.parse(readFileSync(new URL("./fixtures/request-v1.json", import.meta.url), "utf8")) as Record<
@@ -565,6 +566,74 @@ describe("the placement rule of the plugin's own", () => {
       { path: "fields.placement.postgresServerId.value", code: "not_preview_suggestion" },
     ]);
     expect(errorsOf({ "fields.placement.postgresServerId": absent() }, none)).toEqual([]);
+  });
+});
+
+describe("the pasted-secret rule of the plugin's own", () => {
+  // TM gets the paste with these replaced, so only the plugin can tell that a value repeats one. The URL's password,
+  // Abc, is under 4 characters and is not looked for.
+  const sourceText = `${SOURCE}\nTemp password: Xy7kLm92Qz\nDSN postgres://lms:Abc@db.acme.internal/lms`;
+  const pasted = (set: Record<string, unknown>) => errorsOf({ sourceText, ...set });
+
+  test("a value equal to a secret that only its label showed is refused", () => {
+    expect(containsSecret("Xy7kLm92Qz")).toBe(false);
+    expect(pasted({ "fields.companyId": stated("Xy7kLm92Qz", "Temp password: Xy7kLm92Qz") })).toEqual([
+      { path: "fields.companyId.value", code: "secret_in_value" },
+    ]);
+  });
+
+  test.each<[string, Record<string, unknown>, string]>([
+    ["the summary", { summary: "They sent the temp login Xy7kLm92Qz, to be changed." }, "summary"],
+    [
+      "a flag note",
+      { flags: [{ code: "secret_in_text", field: "", note: "The temp login Xy7kLm92Qz was pasted." }] },
+      "flags[0].note",
+    ],
+    [
+      "a value whose only quote is the secret",
+      { "fields.pageTitle": stated("Xy7kLm92Qz", "Xy7kLm92Qz") },
+      "fields.pageTitle.value",
+    ],
+    ["a value with the secret inside it", { "fields.title.value": "Acme Xy7kLm92Qz Learning" }, "fields.title.value"],
+    ["a list value", { "fields.enabledLanguages.value": ["en", "Xy7kLm92Qz"] }, "fields.enabledLanguages.value"],
+    ["the secret split by a hidden character", { "fields.companyId.value": "Xy7kLm\u200b92Qz" }, "fields.companyId.value"],
+  ])("%s repeating it is refused", (_, set, path) => {
+    expect(pasted(set)).toEqual([{ path, code: "secret_in_value" }]);
+  });
+
+  test("a secret the paste wrapped in punctuation is refused when repeated bare", () => {
+    const wrapped = `${SOURCE}\nTemp password: (Zenith@2026!).`;
+    expect(errorsOf({ sourceText: wrapped, summary: "They sent Zenith@2026! as the login." })).toEqual([
+      { path: "summary", code: "secret_in_value" },
+    ]);
+  });
+
+  test("a redacted run that the sent paste still shows elsewhere is not treated as hidden", () => {
+    // TM takes the username as the value of "password:" here, but the paste names priya.n elsewhere too.
+    const shared = `${SOURCE}\nusername/password: priya.n / Pass9876`;
+    expect(redactedTexts(shared)).toContain("priya.n");
+    expect(errorsOf({ sourceText: shared })).toEqual([]);
+  });
+
+  test.each<[string, Record<string, unknown>]>([
+    ["a value sharing only part of a secret", { "fields.title.value": "Xy7k Learning" }],
+    ["a value holding a secret under 4 characters", { "fields.title.value": "Abc Learning" }],
+    ["the secret in another case, as quotes are compared", { "fields.companyId.value": "xy7klm92qz" }],
+    ["a summary and note that only mention the secret", {
+      summary: "The thread pasted a temp password and a database login.",
+      flags: [{ code: "secret_in_text", field: "", note: "A password and a DSN were pasted." }],
+    }],
+    ["a value whose quote held the secret", {
+      "fields.companyId": stated("RC-4471", "Temp password: Xy7kLm92Qz"),
+    }],
+  ])("%s is accepted", (_, set) => {
+    expect(pasted(set)).toEqual([]);
+  });
+
+  test("with no secret in the paste, a value like a password is accepted", () => {
+    const plain = `${SOURCE}\nOur motto: Xy7kLm92Qz`;
+    const title = stated("Xy7kLm92Qz", "Xy7kLm92Qz");
+    expect(errorsOf({ sourceText: plain, summary: "Motto Xy7kLm92Qz.", "fields.pageTitle": title })).toEqual([]);
   });
 });
 

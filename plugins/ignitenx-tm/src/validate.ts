@@ -1,6 +1,7 @@
 // The plugin's mirror of TM's spec.Validate (rules.go), with TM's paths and codes, for what the options let it know.
-// It must never refuse what TM accepts. Its own rules: a placement must be TM's preview suggestion, and the paste must
-// still fit once its secrets are replaced, since that is the text TM receives.
+// It must never refuse what TM accepts. Its own rules: a placement must be TM's preview suggestion; the paste must
+// still fit once its secrets are replaced, since that is the text TM receives; and no summary, note or value may repeat
+// a secret replaced in the paste, which TM never sees.
 import type { AgentOptions } from "./options.js";
 import {
   FIELD_PATHS,
@@ -18,7 +19,16 @@ import {
   type FieldValue,
   type SubmitInput,
 } from "./spec.js";
-import { charCount, containsHidden, containsSecret, findQuote, normalizeText, redact, textCode } from "./text.js";
+import {
+  charCount,
+  containsHidden,
+  containsSecret,
+  findQuote,
+  normalizeText,
+  redact,
+  redactedTexts,
+  textCode,
+} from "./text.js";
 import type { FieldError } from "./tm-client.js";
 
 type Fields = SubmitInput["fields"];
@@ -41,6 +51,9 @@ const listRule = (allowed: (o: AgentOptions) => string[]) => (o: AgentOptions, v
 const hiddenRule = (code: string) => (_: AgentOptions, v: FieldValue) => (containsHidden(v as string) ? code : "");
 
 const always = () => true;
+
+// A replaced text shorter than this is too likely to be an ordinary part of a value to be looked for.
+const MIN_SECRET_CHARS = 4;
 
 const RULES: Record<FieldPath, Rule> = {
   "fields.tenantKey": { check: hiddenRule("invalid_format") },
@@ -85,9 +98,10 @@ const RULES: Record<FieldPath, Rule> = {
 
 // validate returns TM's field errors for the input, at most 20, in the order TM reports them.
 export function validate(input: SubmitInput, options: AgentOptions): FieldError[] {
-  const v = new Validator(options, input.fields);
+  const paste = normalizeText(input.sourceText).text;
+  const v = new Validator(options, input.fields, pastedSecrets(paste, options.limits.sourceTextMaxChars));
   v.text("summary", input.summary, SUMMARY_MAX_CHARS);
-  const source = v.sourceText(input.sourceText);
+  const source = v.sourceText(paste);
   const notRequest = v.triage(input.triage);
   for (const path of FIELD_PATHS) {
     v.field(path, fieldAt(input.fields, path), source, notRequest);
@@ -103,6 +117,7 @@ class Validator {
   constructor(
     private readonly opts: AgentOptions,
     private readonly fields: Fields,
+    private readonly secrets: string[],
   ) {}
 
   fail(path: string, code: string): void {
@@ -111,9 +126,9 @@ class Validator {
     }
   }
 
-  // sourceText returns the normalised text quotes are looked up in, or undefined when TM would refuse the paste.
-  sourceText(s: string): string | undefined {
-    const text = normalizeText(s).text;
+  // sourceText takes the normalised paste, and returns it for quotes to be looked up in, or undefined when TM would
+  // refuse it.
+  sourceText(text: string): string | undefined {
     const max = this.opts.limits.sourceTextMaxChars;
     if (text === "") {
       this.fail("sourceText", "source_empty");
@@ -237,7 +252,7 @@ class Validator {
 
   private value(path: string, value: FieldValue, rule: Rule): void {
     const texts = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
-    if (texts.some(containsSecret)) {
+    if (texts.some((t) => this.secret(t))) {
       this.fail(path, "secret_in_value");
       return;
     }
@@ -282,7 +297,7 @@ class Validator {
   }
 
   text(path: string, s: string, maxChars: number): void {
-    if (containsSecret(s)) {
+    if (this.secret(s)) {
       this.fail(path, "secret_in_value");
       return;
     }
@@ -291,7 +306,37 @@ class Validator {
       this.fail(path, code);
     }
   }
+
+  // secret is TM's check for a secret, plus the plugin's own: s, once normalised, holds a text the paste's redaction
+  // replaced, such as a password that only its label in the paste showed to be one.
+  private secret(s: string): boolean {
+    if (containsSecret(s)) {
+      return true;
+    }
+    const text = this.secrets.length > 0 ? normalizeText(s).text : "";
+    return this.secrets.some((secret) => text.includes(secret));
+  }
 }
+
+// pastedSecrets is what the redaction of the normalised paste hides from TM, for a paste TM would take. Each is also
+// kept without the punctuation around it, which the model drops when it repeats a secret.
+function pastedSecrets(paste: string, maxChars: number): string[] {
+  if (paste === "" || charCount(paste) > maxChars) {
+    return [];
+  }
+  const sent = redact(paste).text;
+  const out = new Set<string>();
+  for (const text of redactedTexts(paste)) {
+    for (const secret of [text, text.replace(EDGE_PUNCTUATION, "")]) {
+      if (charCount(secret) >= MIN_SECRET_CHARS && !sent.includes(secret)) {
+        out.add(secret);
+      }
+    }
+  }
+  return [...out];
+}
+
+const EDGE_PUNCTUATION = /^["'`*_()[\]{}<>.,;:!?]+|["'`*_()[\]{}<>.,;:!?]+$/g;
 
 function languages(o: AgentOptions): string[] {
   return o.languages.map((l) => l.code);

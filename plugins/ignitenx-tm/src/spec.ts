@@ -125,8 +125,9 @@ const FLAG_HELP =
   "Flag only what a reviewer must act on. A value worked out from the text (time zone from a city, tenant key from " +
   "the name, a partner the text names) is source derived and needs no flag. assumed_value: only for a value just " +
   "internal staff stated, or a partner chosen without evidence. missing_required: only for an empty tenantKey, " +
-  "title, partnerId, adminUserName, adminEmail, timeZone, subscription.planId or placement field; other empty " +
-  "fields need no flag. other: only when no code fits, with a note.";
+  "title, partnerId, adminUserName, adminEmail, timeZone, subscription.planId or placement field, except a " +
+  "placement whose suggestion is null, which gets placement_needs_human only; other empty fields need no flag. " +
+  "other: only when no code fits, with a note.";
 
 export const SubmitInputSchema = z.strictObject({
   sourceText: z.string().describe("The paste as given; only the trims the instructions allow"),

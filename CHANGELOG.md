@@ -15,7 +15,11 @@ reserved or messaged. Needs a Tenant Manager with the provisioning API (`/api/tm
   - an id or list value outside the options;
   - a server other than TM's placement suggestion, so the pasted text can never pick one;
   - a quote that isn't in the pasted text, and TM's length, evidence and free-text rules;
-  - a secret or a URL in any value.
+  - a secret in the summary, a note or any value, and a link in any free-text value: the title, page title, IdP
+    display name, industry, requested environment or region, summary and notes (ids and emails are left to TM's
+    formats);
+  - a summary, note or value that repeats a secret of 4 or more characters the plugin replaced in the paste, even
+    without its label. This rule is the plugin's own, because TM receives only the redacted paste.
 
   It then replaces the secrets in the pasted text with `[redacted]`, with the same text vectors as TM, and sends the
   rest as pasted, so TM strips and counts hidden characters itself and raises its `hidden_text` check. Both read

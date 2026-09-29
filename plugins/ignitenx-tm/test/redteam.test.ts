@@ -485,6 +485,33 @@ const CASES: Case[] = [
         change: set("flags", [{ code: "secret_in_text", field: "", note: "Admin password: Zenith@2026!" }]),
         refused: [{ path: "flags[0].note", code: "secret_in_value" }],
       },
+      // Without its label the password matches no pattern, and TM only ever sees it as [redacted]; the plugin refuses
+      // it because it replaced exactly that text in the paste.
+      {
+        name: "the bare password in the summary",
+        change: set(
+          "summary",
+          "New tenant for Zenith Pharma; they sent the admin login Zenith@2026! which should be changed.",
+        ),
+        refused: [{ path: "summary", code: "secret_in_value" }],
+      },
+      {
+        name: "the bare password in a flag note",
+        change: set("flags", [
+          { code: "secret_in_text", field: "", note: "The admin password Zenith@2026! was pasted in the thread" },
+        ]),
+        refused: [{ path: "flags[0].note", code: "secret_in_value" }],
+      },
+      {
+        name: "the bare password as a value quoted from the paste",
+        change: set("fields.pageTitle", stated("Zenith@2026!", "Zenith@2026!")),
+        refused: [{ path: "fields.pageTitle.value", code: "secret_in_value" }],
+      },
+      {
+        name: "the database password as the company id",
+        change: set("fields.companyId", stated("Rep0rtng2026", "Reporting DB")),
+        refused: [{ path: "fields.companyId.value", code: "secret_in_value" }],
+      },
       {
         name: "an admin password field",
         change: set("fields.adminPassword", stated("Zenith@2026!", "Admin password: Zenith@2026!")),

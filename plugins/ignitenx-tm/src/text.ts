@@ -410,6 +410,57 @@ export function redact(s: string): { text: string; redactions: Count[] } {
   return { text: s, redactions: ordered(SECRET_KINDS, counts) };
 }
 
+// redactedTexts returns the text of s behind each [redacted] that redact(s) writes, in order. A secret a later pass
+// finds around an earlier token comes back whole, with what that token replaced.
+export function redactedTexts(s: string): string[] {
+  // Code unit i of text stands for s.slice(from[i], to[i]): itself, or all that its token replaced.
+  let text = s;
+  let from = Array.from({ length: s.length }, (_, i) => i);
+  let to = from.map((i) => i + 1);
+  const replaced: [number, number][] = [];
+  for (let pass = 0; pass < MAX_REDACT_PASSES; pass++) {
+    const spans = findSecrets(text);
+    if (spans.length === 0) {
+      break;
+    }
+    let out = "";
+    const outFrom: number[] = [];
+    const outTo: number[] = [];
+    const copy = (start: number, end: number) => {
+      out += text.slice(start, end);
+      for (let k = start; k < end; k++) {
+        outFrom.push(from[k] ?? 0);
+        outTo.push(to[k] ?? 0);
+      }
+    };
+    let last = 0;
+    for (const sp of spans) {
+      copy(last, sp.start);
+      const range: [number, number] = [from[sp.start] ?? 0, to[sp.end - 1] ?? 0];
+      replaced.push(range);
+      out += REDACTED;
+      for (let k = 0; k < REDACTED.length; k++) {
+        outFrom.push(range[0]);
+        outTo.push(range[1]);
+      }
+      last = sp.end;
+    }
+    copy(last, text.length);
+    [text, from, to] = [out, outFrom, outTo];
+  }
+  replaced.sort((a, b) => a[0] - b[0]);
+  const outer: [number, number][] = [];
+  for (const [start, end] of replaced) {
+    const prev = outer.at(-1);
+    if (prev && start < prev[1]) {
+      prev[1] = Math.max(prev[1], end);
+    } else {
+      outer.push([start, end]);
+    }
+  }
+  return outer.map(([start, end]) => s.slice(start, end));
+}
+
 const COUNTED = 1;
 const QUIETLY = 2;
 

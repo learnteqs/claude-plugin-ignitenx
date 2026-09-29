@@ -283,8 +283,9 @@ describe("TMClient", () => {
       tm.answers.set(`GET /${OPTIONS}`, [answer]);
       tm.answers.set(`POST /${REQUESTS}`, [answer]);
       const c = client();
-      for (const call of [c.getJSON(OPTIONS), c.postJSON(REQUESTS, {})]) {
-        const err = await expectTMError(call, code);
+      // One call at a time: a call started before the loop reaches it could reject with no handler attached yet.
+      for (const call of [() => c.getJSON(OPTIONS), () => c.postJSON(REQUESTS, {})]) {
+        const err = await expectTMError(call(), code);
         expect(err.status).toBe(typeof answer === "string" ? undefined : answer.status);
         expect(err.retryAfterSeconds).toBe(wait);
         expect(err).not.toBeInstanceOf(IdentityError);
