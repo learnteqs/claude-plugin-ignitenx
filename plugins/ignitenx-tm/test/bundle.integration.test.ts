@@ -115,7 +115,8 @@ describe("bundled tpa-mcp server", () => {
     });
 
     const { input, clean } = pastedRequest();
-    const before = Date.now();
+    // The id's time comes from the server process, so allow for a little clock difference between processes.
+    const before = Date.now() - 50;
     const submitted = await call("tpa_submit_request", input);
     expect(submitted.isError, JSON.stringify(submitted.content)).toBeFalsy();
 

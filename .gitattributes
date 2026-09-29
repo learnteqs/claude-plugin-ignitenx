@@ -1,2 +1,3 @@
 plugins/ignitenx-tm/dist/* text eol=lf
 plugins/ignitenx-tm/test/fixtures/*.json text eol=lf
+plugins/ignitenx-tm/test/fixtures/pastes/*.txt text eol=lf

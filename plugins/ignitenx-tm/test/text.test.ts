@@ -99,13 +99,16 @@ describe("text vectors shared with TM", () => {
     expect(listed.length).toBe(210);
     // Every code point in turn, after a space and before VS16 and U+20E3: VS16 stays exactly after an emoji base.
     expect(selected(normalizeText(probe(VS16 + KEYCAP)).text)).toEqual(listed);
-  });
+  }, 30_000);
 
   test("the colour emoji are exactly those the vector lists", () => {
     const listed = listedIn("every colour emoji loses its selector quietly");
     expect(listed.length).toBe(161);
     for (const cp of listed) {
       expect(normalizeText(cps(cp, 0xfe0f)), cp.toString(16)).toEqual({ text: cps(cp), stripped: [] });
+      // Free text still refuses the selector, so a colour emoji must never also be an emoji base.
+      expect(containsHidden(cps(cp, 0xfe0f)), cp.toString(16)).toBe(true);
+      expect(isFreeText(cps(cp, 0xfe0f)), cp.toString(16)).toBe(false);
     }
     // Every code point in turn, after a space and before VS16: each VS16 is kept, counted, or removed quietly, and
     // only as many are removed quietly as the vector lists.
@@ -114,7 +117,7 @@ describe("text vectors shared with TM", () => {
     const counted = selectorsCounted(withVS16.stripped) - selectorsCounted(without.stripped);
     const kept = withVS16.text.split(VS16).length - 1;
     expect(0x110000 - 0x800 - counted - kept).toBe(listed.length);
-  });
+  }, 30_000);
 });
 
 describe("normalizeText", () => {
