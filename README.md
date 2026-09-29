@@ -5,7 +5,7 @@ This marketplace has two plugins:
 | Plugin | For |
 |---|---|
 | `ignitenx-lms` | L&D workflow automation for the igniteNX Learning Management System |
-| `ignitenx-tm` | The tenant-provisioning agent for igniteNX Tenant Manager. **Runner only**, see below. |
+| `ignitenx-tm` | The tenant-provisioning agent for igniteNX Tenant Manager. **Agent folder or runner only**, see below. |
 
 ## ignitenx-lms
 
@@ -41,13 +41,17 @@ See [USAGE.md](plugins/ignitenx-lms/USAGE.md) for detailed usage guide.
 
 ## ignitenx-tm
 
-The tenant-provisioning agent. It reaches Tenant Manager only through its bundled `tpa-mcp` tools. A hook denies every
-other tool in any session where the plugin is enabled, so **don't enable it in your everyday Claude Code**. It installs
-disabled and is meant for the agent's dedicated runner. If you enabled it by mistake, run
+The tenant-provisioning agent. You paste a tenant request, usually an email thread, and it records the request in
+Tenant Manager as a shadow request for people to review. Nothing is provisioned.
+
+It reaches Tenant Manager only through its bundled `tpa-mcp` tools. A hook denies every other tool in any session where
+the plugin is enabled, so **don't enable it in your everyday Claude Code**. It installs disabled and is meant for the
+agent's own folder in the Claude desktop app, or a dedicated runner. If you enabled it by mistake, run
 `claude plugin disable ignitenx-tm@ignitenx-plugins` and start a new session.
 
 | Command | Description |
 |---------|-------------|
-| `/ignitenx-tm:poll` | Run one agent cycle. Currently it only verifies the agent's Tenant Manager identity |
+| `/ignitenx-tm:poll` | Run one agent cycle: check the identity, read the options, and submit a request pasted in the session. It doesn't pre-approve the submit, so Manual mode still asks before it |
 
-See [plugins/ignitenx-tm/USAGE.md](plugins/ignitenx-tm/USAGE.md) for the agent key, runner flags and development.
+See [plugins/ignitenx-tm/USAGE.md](plugins/ignitenx-tm/USAGE.md) for the agent key, the desktop setup, runner flags and
+development.

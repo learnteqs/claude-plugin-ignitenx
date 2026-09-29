@@ -1,0 +1,340 @@
+[
+  {
+    "name": "CRLF and lone CR become LF",
+    "input": "a\r\nb\rc",
+    "normalised": "a\nb\nc"
+  },
+  {
+    "name": "surrounding whitespace is trimmed",
+    "input": "  \n hello \t\n",
+    "normalised": "hello"
+  },
+  {
+    "name": "tab and newline inside are kept",
+    "input": "a\tb\nc",
+    "normalised": "a\tb\nc"
+  },
+  {
+    "name": "bidi controls are removed",
+    "input": "abc\u202edcba\u202c",
+    "normalised": "abcdcba",
+    "stripped": {
+      "bidi_control": 2
+    }
+  },
+  {
+    "name": "bidi isolates and marks are removed",
+    "input": "a\u2066b\u2069c\u200ed\u200fe\u061c",
+    "normalised": "abcde",
+    "stripped": {
+      "bidi_control": 5
+    }
+  },
+  {
+    "name": "zero-width characters are removed",
+    "input": "pa\u200bss\u200dword\ufeff",
+    "normalised": "password",
+    "stripped": {
+      "zero_width": 3
+    }
+  },
+  {
+    "name": "soft hyphen and invisible operators are removed",
+    "input": "pass\u00adwo\u2062rd",
+    "normalised": "password",
+    "stripped": {
+      "zero_width": 2
+    }
+  },
+  {
+    "name": "tag characters (ASCII smuggling) are removed",
+    "input": "hi\udb40\udc41\udb40\udc42\udb40\udc7f",
+    "normalised": "hi",
+    "stripped": {
+      "tag_character": 3
+    }
+  },
+  {
+    "name": "supplementary variation selectors are removed",
+    "input": "x\udb40\udd00y\udb40\uddef",
+    "normalised": "xy",
+    "stripped": {
+      "variation_selector": 2
+    }
+  },
+  {
+    "name": "the emoji variation selector is kept",
+    "input": "\u2764\ufe0f thanks",
+    "normalised": "\u2764\ufe0f thanks"
+  },
+  {
+    "name": "C0, DEL and C1 controls are removed",
+    "input": "a\u0000b\u0007c\u007fd\u0085e\u009f",
+    "normalised": "abcde",
+    "stripped": {
+      "control": 5
+    }
+  },
+  {
+    "name": "no-break space is kept",
+    "input": "a\u00a0b",
+    "normalised": "a\u00a0b"
+  },
+  {
+    "name": "Tamil text is unchanged",
+    "input": "\u0bb5\u0ba3\u0b95\u0bcd\u0b95\u0bae\u0bcd \u0b95\u0bc1\u0bb4\u0bc1",
+    "normalised": "\u0bb5\u0ba3\u0b95\u0bcd\u0b95\u0bae\u0bcd \u0b95\u0bc1\u0bb4\u0bc1"
+  },
+  {
+    "name": "no Unicode normal form is applied",
+    "input": "cafe\u0301",
+    "normalised": "cafe\u0301"
+  },
+  {
+    "name": "password line: only the value is redacted",
+    "input": "Temp password: Welcome@123",
+    "normalised": "Temp password: Welcome@123",
+    "redacted": "Temp password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "password value on the next line",
+    "input": "Password:\n  Welcome@123",
+    "normalised": "Password:\n  Welcome@123",
+    "redacted": "Password:\n  [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "hidden characters can't split a secret",
+    "input": "pass\u200bword: hunter22",
+    "normalised": "password: hunter22",
+    "stripped": {
+      "zero_width": 1
+    },
+    "redacted": "password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "TM agent key",
+    "input": "old key tmk_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA here",
+    "normalised": "old key tmk_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA here",
+    "redacted": "old key [redacted] here",
+    "redactions": {
+      "tm_agent_key": 1
+    }
+  },
+  {
+    "name": "LMS API key",
+    "input": "inx_acme_42_0f8fad5b-d9cb-469f-a165-70867728950e",
+    "normalised": "inx_acme_42_0f8fad5b-d9cb-469f-a165-70867728950e",
+    "redacted": "[redacted]",
+    "redactions": {
+      "lms_api_key": 1
+    }
+  },
+  {
+    "name": "JWT",
+    "input": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+    "normalised": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+    "redacted": "Bearer [redacted]",
+    "redactions": {
+      "jwt": 1
+    }
+  },
+  {
+    "name": "credentials in a URL: only the password",
+    "input": "mongodb://admin:S3cret!@db.example.com:27017/x",
+    "normalised": "mongodb://admin:S3cret!@db.example.com:27017/x",
+    "redacted": "mongodb://admin:[redacted]@db.example.com:27017/x",
+    "redactions": {
+      "url_credentials": 1
+    }
+  },
+  {
+    "name": "Azure account key",
+    "input": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=core.windows.net",
+    "normalised": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=core.windows.net",
+    "redacted": "AccountName=acme;AccountKey=[redacted];EndpointSuffix=core.windows.net",
+    "redactions": {
+      "azure_account_key": 1
+    }
+  },
+  {
+    "name": "SAS signature",
+    "input": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
+    "normalised": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
+    "redacted": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=[redacted]",
+    "redactions": {
+      "azure_sas": 1
+    }
+  },
+  {
+    "name": "PEM private key block",
+    "input": "key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEow\nIBAAK\n-----END RSA PRIVATE KEY-----\nbye",
+    "normalised": "key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEow\nIBAAK\n-----END RSA PRIVATE KEY-----\nbye",
+    "redacted": "key:\n[redacted]\nbye",
+    "redactions": {
+      "private_key": 1
+    }
+  },
+  {
+    "name": "PEM private key cut off",
+    "input": "-----BEGIN PRIVATE KEY-----\nMIIEow",
+    "normalised": "-----BEGIN PRIVATE KEY-----\nMIIEow",
+    "redacted": "[redacted]",
+    "redactions": {
+      "private_key": 1
+    }
+  },
+  {
+    "name": "Anthropic and OpenAI keys",
+    "input": "sk-ant-api03-abcdefghijklmnopqrstuv and sk-proj-abcdefghijklmnopqrstuvwx",
+    "normalised": "sk-ant-api03-abcdefghijklmnopqrstuv and sk-proj-abcdefghijklmnopqrstuvwx",
+    "redacted": "[redacted] and [redacted]",
+    "redactions": {
+      "anthropic_key": 1,
+      "openai_key": 1
+    }
+  },
+  {
+    "name": "AWS access key",
+    "input": "AKIAIOSFODNN7EXAMPLE",
+    "normalised": "AKIAIOSFODNN7EXAMPLE",
+    "redacted": "[redacted]",
+    "redactions": {
+      "aws_access_key": 1
+    }
+  },
+  {
+    "name": "GitHub token",
+    "input": "ghp_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "normalised": "ghp_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "redacted": "[redacted]",
+    "redactions": {
+      "github_token": 1
+    }
+  },
+  {
+    "name": "a key inside a password line counts once",
+    "input": "token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+    "normalised": "token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+    "redacted": "token: [redacted]",
+    "redactions": {
+      "jwt": 1
+    }
+  },
+  {
+    "name": "already redacted by the plugin",
+    "input": "password: [redacted]",
+    "normalised": "password: [redacted]"
+  },
+  {
+    "name": "prose about passwords is not a secret",
+    "input": "The password policy is strict; token count: 42",
+    "normalised": "The password policy is strict; token count: 42"
+  },
+  {
+    "name": "a short value is not a secret",
+    "input": "Secret: yes",
+    "normalised": "Secret: yes"
+  },
+  {
+    "name": "sk- inside a word is not a key",
+    "input": "task-abcdefghijklmnopqrstuvwxyz",
+    "normalised": "task-abcdefghijklmnopqrstuvwxyz"
+  },
+  {
+    "name": "a blank label doesn't take the next label as its value",
+    "input": "API key:\nPassword: Welcome@123",
+    "normalised": "API key:\nPassword: Welcome@123",
+    "redacted": "API key:\nPassword: [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "blank labels across a blank line",
+    "input": "Token:\n\nPassword: Welcome@123",
+    "normalised": "Token:\n\nPassword: Welcome@123",
+    "redacted": "Token:\n\nPassword: [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "a label with no space before its value",
+    "input": "password:abc123token:xyz",
+    "normalised": "password:abc123token:xyz",
+    "redacted": "password:[redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "environment-style name",
+    "input": "DB_PASSWORD=Welcome@123",
+    "normalised": "DB_PASSWORD=Welcome@123",
+    "redacted": "DB_PASSWORD=[redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "camel-case name",
+    "input": "adminPassword: Welcome@123",
+    "normalised": "adminPassword: Welcome@123",
+    "redacted": "adminPassword: [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "client secret and access token",
+    "input": "client_secret=abc123xyz access_token: abcd1234",
+    "normalised": "client_secret=abc123xyz access_token: abcd1234",
+    "redacted": "client_secret=[redacted] access_token: [redacted]",
+    "redactions": {
+      "password_line": 2
+    }
+  },
+  {
+    "name": "JSON password: the rest of the value token goes too",
+    "input": "{\"password\": \"Welcome@123\"}",
+    "normalised": "{\"password\": \"Welcome@123\"}",
+    "redacted": "{\"password\": [redacted]",
+    "redactions": {
+      "password_line": 1
+    }
+  },
+  {
+    "name": "a label glued to a fixed-length key",
+    "input": "tmk_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtoken: hunter22",
+    "normalised": "tmk_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtoken: hunter22",
+    "redacted": "[redacted]token: [redacted]",
+    "redactions": {
+      "tm_agent_key": 1,
+      "password_line": 1
+    }
+  },
+  {
+    "name": "a second pass finds a key the first one exposed",
+    "input": "inx_acme_42_0f8fad5b-d9cb-469f-a165-70867728950esk-proj-abcdefghijklmnopqrstuvwx",
+    "normalised": "inx_acme_42_0f8fad5b-d9cb-469f-a165-70867728950esk-proj-abcdefghijklmnopqrstuvwx",
+    "redacted": "[redacted][redacted]",
+    "redactions": {
+      "lms_api_key": 1,
+      "openai_key": 1
+    }
+  },
+  {
+    "name": "words that only start like a label",
+    "input": "Passwords: must be long. Tokenization: on. Secretary: Priya",
+    "normalised": "Passwords: must be long. Tokenization: on. Secretary: Priya"
+  }
+]

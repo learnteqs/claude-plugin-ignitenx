@@ -1,7 +1,14 @@
 import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);
 
+// src/tool-names.ts
+var TOOL_NAMES = ["tpa_get_identity", "tpa_get_options", "tpa_submit_request"];
+var SERVER_PREFIX = "mcp__plugin_ignitenx-tm_tpa-mcp__";
+function qualified(name) {
+  return `${SERVER_PREFIX}${name}`;
+}
+
 // src/guard.ts
-var ALLOWED_TOOLS = /* @__PURE__ */ new Set(["mcp__plugin_ignitenx-tm_tpa-mcp__tpa_get_identity"]);
+var ALLOWED_TOOLS = new Set(TOOL_NAMES.map(qualified));
 function decide(stdin) {
   let toolName;
   try {
