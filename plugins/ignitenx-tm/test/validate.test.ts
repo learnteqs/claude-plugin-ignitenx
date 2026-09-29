@@ -608,6 +608,15 @@ describe("the pasted-secret rule of the plugin's own", () => {
     ]);
   });
 
+  test.each<[string, string]>([
+    ["a label with words before its colon", "Temp password for the admin: Vq8rTn41Ws"],
+    ["a separator before the value", "Password: -> Vq8rTn41Ws"],
+  ])("a secret after %s is refused when repeated bare", (_, line) => {
+    expect(errorsOf({ sourceText: `${SOURCE}\n${line}`, summary: "They sent Vq8rTn41Ws as the login." })).toEqual([
+      { path: "summary", code: "secret_in_value" },
+    ]);
+  });
+
   test("a redacted run that the sent paste still shows elsewhere is not treated as hidden", () => {
     // TM takes the username as the value of "password:" here, but the paste names priya.n elsewhere too.
     const shared = `${SOURCE}\nusername/password: priya.n / Pass9876`;

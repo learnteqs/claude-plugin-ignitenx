@@ -24351,24 +24351,147 @@ function pattern(re, group = 0) {
     return out;
   };
 }
-var LABEL = new RegExp(
-  `(?:${ci("password|passwd|pwd|secret")}|${ci("api")}[_ -]?${ci("key")}|${ci("token")})["']?[${WS}]*[:=]`,
-  "gu"
+var HS = "\\t \\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000";
+var WORD = `[^:${WS}=][^${WS}=]{0,63}`;
+var COLON = `["']?[${WS}]*[:=]`;
+var KEYWORD = `(?:${ci("password|passwd|secret")}|${ci("api")}[_ -]?${ci("key")}|(${ci("token")}))(${ci("s")}|\\(${ci("s")}\\))?`;
+var BARE_LABEL = new RegExp(`(?:${KEYWORD}|${ci("pwd")})${COLON}`, "gu");
+var wordedLabel = (lazy) => {
+  const words = `(${WORD}${lazy})(?:[${HS}]+${WORD}${lazy}){0,3}${lazy}`;
+  return new RegExp(`${KEYWORD}[${HS}]+${words}${COLON}[${WS}]+`, "gu");
+};
+var WORDED_LABELS = [wordedLabel(""), wordedLabel("?")];
+var METERING = new RegExp(
+  `^(?:${ci("budgets?|limits?|count|usage|used|costs?|quota|price|pricing|rates?|spend|consumption|allocation|cap")}|${ci("balance|remaining|utilisation|utilization|per|overage")})["']?:?$`,
+  "u"
 );
+var NUMBER = new RegExp(
+  `^["'(\\[]?~?(?:\\u20b9|${ci("rs")}\\.?|${ci("inr")})?[0-9][0-9,.]*(?:${ci("k|m|lakh|crore")}|%)?(?:/-|\\+)?["')\\]}]*[,;]?$`,
+  "u"
+);
+var ADDRESS = "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:[.][A-Za-z0-9-]+)*[.][A-Za-z]{2,}";
+var EMAILS = new RegExp(`^(?:${ci("mailto")}:)?${ADDRESS}(?:[;,/]${ADDRESS})*[.,;)]?$`, "u");
 function labelValues(s) {
-  const labelEnds = [...s.matchAll(LABEL)].map((m) => m.index + m[0].length);
-  const ends = new Set(labelEnds);
+  const labels = /* @__PURE__ */ new Map();
+  const add = (m, worded) => {
+    const end2 = m.index + m[0].length;
+    const l = labels.get(end2) ?? { worded, tokensOnly: true, singular: false };
+    const tokensOnly = l.tokensOnly && m[1] !== void 0 && m[2] !== void 0;
+    const singular = l.singular || !worded && m[2] === void 0;
+    labels.set(end2, { worded: worded || l.worded, tokensOnly, singular });
+  };
+  eachMatch(s, BARE_LABEL, (m) => add(m, false));
+  for (const re of WORDED_LABELS) {
+    eachMatch(s, re, (m) => {
+      if (m[1] === void 0 || !METERING.test(m[3] ?? "")) {
+        add(m, true);
+      }
+    });
+  }
   const out = [];
   let end = 0;
-  for (const labelEnd of labelEnds) {
-    const start = skip(s, labelEnd, true);
+  for (const [labelEnd, label2] of [...labels].sort((a, b) => a[0] - b[0])) {
+    const start = valueStart(s, labelEnd);
     end = start < end ? end : skip(s, start, false);
-    if (ends.has(end) || charCount(s.slice(start, Math.min(end, start + 8))) < 4) {
+    const run = s.slice(start, end);
+    const blank = labels.get(end)?.singular === true;
+    if (blank || label2.worded && EMAILS.test(unwrapped(run)) || label2.tokensOnly && NUMBER.test(run)) {
       continue;
     }
-    out.push([start, end]);
+    const stop = valueEnd(s, start, end, labels);
+    if (charCount(s.slice(start, Math.min(stop, start + 8))) >= 4) {
+      out.push([start, stop]);
+    }
   }
   return out;
+}
+function eachMatch(s, re, found) {
+  re.lastIndex = 0;
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    found(m);
+    re.lastIndex = m.index + 1;
+  }
+}
+var asciiAlnum = (cp) => cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122;
+var lineBreak = (cp) => cp === 10 || cp === 8232 || cp === 8233;
+function valueStart(s, i) {
+  i = skip(s, i, true);
+  for (let n = 0; ; ) {
+    const end = separatorEnd(s, i);
+    const counted = end >= 0 && /[^>]/.test(s.slice(i, end));
+    if (end < 0 || counted && n === 2) {
+      return i;
+    }
+    if (counted) {
+      n++;
+    }
+    i = skip(s, end, true);
+  }
+}
+function separatorEnd(s, i) {
+  for (let n = 0; ; n++) {
+    if (i >= s.length) {
+      return n > 0 ? i : -1;
+    }
+    const cp = s.codePointAt(i) ?? 0;
+    if (spaceCode(cp)) {
+      return n > 0 ? i : -1;
+    }
+    if (n === 3 || asciiAlnum(cp)) {
+      return -1;
+    }
+    i += width(cp);
+  }
+}
+function valueEnd(s, start, end, labels) {
+  end = Math.max(end, quoteEnd(s, start));
+  for (let from = start; !/[0-9A-Za-z]/.test(s.slice(from, end)); ) {
+    let next = end;
+    while (next < s.length) {
+      const cp = s.codePointAt(next) ?? 0;
+      if (!spaceCode(cp) || lineBreak(cp)) {
+        break;
+      }
+      next += width(cp);
+    }
+    const stop = skip(s, next, false);
+    if (stop === next || labels.get(stop)?.singular) {
+      break;
+    }
+    [from, end] = [next, stop];
+  }
+  return end;
+}
+var QUOTES = /* @__PURE__ */ new Map([
+  [34, 34],
+  [39, 39],
+  [96, 96],
+  [8220, 8221],
+  [8216, 8217]
+]);
+var MAX_QUOTED = 64;
+var WRAPPERS = new Map([...QUOTES, [60, 62], [40, 41]]);
+function quoteEnd(s, start) {
+  const closing = QUOTES.get(s.codePointAt(start) ?? -1);
+  if (closing === void 0) {
+    return start;
+  }
+  let i = start + 1;
+  for (let n = 0; n < MAX_QUOTED && i < s.length; n++) {
+    const cp = s.codePointAt(i) ?? 0;
+    i += width(cp);
+    if (lineBreak(cp)) {
+      break;
+    }
+    if (cp === closing && !asciiAlnum(s.codePointAt(i) ?? -1)) {
+      return i;
+    }
+  }
+  return start;
+}
+function unwrapped(v) {
+  const closing = WRAPPERS.get(v.codePointAt(0) ?? -1);
+  return v.length > 1 && closing !== void 0 && v.charCodeAt(v.length - 1) === closing ? v.slice(1, -1) : v;
 }
 function skip(s, i, space) {
   while (i < s.length) {
@@ -24402,7 +24525,7 @@ var SECRET_PATTERNS = [
   { code: "azure_sas", find: pattern(/[?&]sig=([A-Za-z0-9_%/+=]{16,})/dgu, 1) },
   { code: "anthropic_key", find: pattern(/\bsk-ant-[A-Za-z0-9_-]{20,}/dgu) },
   { code: "openai_key", find: pattern(/\bsk-[A-Za-z0-9_-]{20,}/dgu) },
-  { code: "aws_access_key", find: pattern(/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/dgu) },
+  { code: "aws_access_key", find: pattern(/(?:^|[^0-9A-Z])((?:AKIA|ASIA)[0-9A-Z]{16,})/dgu, 1) },
   { code: "github_token", find: pattern(/\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})\b/dgu) },
   { code: "password_line", find: labelValues }
 ];
@@ -25398,7 +25521,7 @@ function link(raw, requestId) {
 var TOOL_NAMES = ["tpa_get_identity", "tpa_get_options", "tpa_submit_request"];
 
 // src/server.ts
-var SERVER_VERSION = "0.2.0";
+var SERVER_VERSION = "0.2.1";
 var [IDENTITY, OPTIONS, SUBMIT] = TOOL_NAMES;
 function createServer(env = process.env, fetchImpl = fetch) {
   const server = new McpServer({ name: "tpa-mcp", version: SERVER_VERSION }, { instructions: getInstructions() });

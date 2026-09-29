@@ -1,5 +1,18 @@
 # Changelog
 
+## ignitenx-tm 0.2.1
+
+Copies Tenant Manager's redaction fix (learnteqs/ignitenx#5025, #5024, #5017), so the plugin replaces these secrets
+in the paste before sending it, and refuses a summary, note or value that repeats one:
+
+- a password after a label with words before its colon: "Temp password for the admin: …", "API key for staging: …",
+  "Password (admin): …";
+- a password behind a separator, such as "Password: -> …" or a bullet or emoji, and a quoted password with a space;
+- an AWS access key followed straight away by a digit or keycap.
+
+A count or an amount after "tokens" ("Max tokens: 4096", `{"max_tokens": 4096}`), "Token budget: 50000", and an
+email address after "Send the password to:" stay as pasted. The shared text vectors grow from 99 to 232.
+
 ## ignitenx-tm 0.2.0
 
 The agent now records a pasted tenant request in Tenant Manager as a **shadow request**. Nothing is provisioned,

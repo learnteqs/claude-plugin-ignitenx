@@ -327,7 +327,7 @@ describe("layer-1 redaction and hidden text", () => {
 
   test("such a quote is sent as the redaction token when the text has one", async () => {
     const h = harness();
-    const key = "xAKIAABCDEFGHIJKLMNOP ok";
+    const key = "9AKIAABCDEFGHIJKLMNOP ok";
     const sourceText = `${SOURCE}\nref ${key}\npassword: hunter22`;
     await h.submitter.submit(input({ sourceText, "fields.title.evidence": ["AKIAABCDEFGHIJKLMNOP ok"] }));
     const [body] = h.sent();

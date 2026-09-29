@@ -288,29 +288,171 @@ function pattern(re: RegExp, group = 0): Finder {
   };
 }
 
-const LABEL = new RegExp(
-  `(?:${ci("password|passwd|pwd|secret")}|${ci("api")}[_ -]?${ci("key")}|${ci("token")})["']?[${WS}]*[:=]`,
-  "gu",
+const HS = "\\t \\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000";
+// A word can't start with ':', which would let "Password (admin) : X  Role : Y" read as one label ending at "Role :".
+const WORD = `[^:${WS}=][^${WS}=]{0,63}`;
+const COLON = `["']?[${WS}]*[:=]`;
+const KEYWORD =
+  `(?:${ci("password|passwd|secret")}|${ci("api")}[_ -]?${ci("key")}|(${ci("token")}))(${ci("s")}|\\(${ci("s")}\\))?`;
+// A keyword right before its colon, as in "Password:" or "Tokens :"; pwd takes no words.
+const BARE_LABEL = new RegExp(`(?:${KEYWORD}|${ci("pwd")})${COLON}`, "gu");
+// The longest and the shortest words before a colon; a space after it keeps "https:" from ending one.
+const wordedLabel = (lazy: string) => {
+  const words = `(${WORD}${lazy})(?:[${HS}]+${WORD}${lazy}){0,3}${lazy}`;
+  return new RegExp(`${KEYWORD}[${HS}]+${words}${COLON}[${WS}]+`, "gu");
+};
+const WORDED_LABELS = [wordedLabel(""), wordedLabel("?")];
+const METERING = new RegExp(
+  `^(?:${ci("budgets?|limits?|count|usage|used|costs?|quota|price|pricing|rates?|spend|consumption|allocation|cap")}|` +
+    `${ci("balance|remaining|utilisation|utilization|per|overage")})["']?:?$`,
+  "u",
 );
+const NUMBER = new RegExp(
+  `^["'(\\[]?~?(?:\\u20b9|${ci("rs")}\\.?|${ci("inr")})?[0-9][0-9,.]*(?:${ci("k|m|lakh|crore")}|%)?` +
+    `(?:/-|\\+)?["')\\]}]*[,;]?$`,
+  "u",
+);
+const ADDRESS = "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:[.][A-Za-z0-9-]+)*[.][A-Za-z]{2,}";
+const EMAILS = new RegExp(`^(?:${ci("mailto")}:)?${ADDRESS}(?:[;,/]${ADDRESS})*[.,;)]?$`, "u");
+// What the labels ending at one place allow: after words an email address, after only "tokens" a number.
+type LabelEnd = { worded: boolean; tokensOnly: boolean; singular: boolean };
 
-// labelValues finds the value after each label such as "Password:" or DB_PASSWORD=: the next run of at least four
-// non-space characters. A run that ends in a label of its own is a blank field, not a value.
+// labelValues finds the value after each label such as "Password:", "Password for the admin:" or DB_PASSWORD=: the
+// next run of at least four non-space characters. A run that ends in a singular bare label is a blank field.
 function labelValues(s: string): [number, number][] {
-  const labelEnds = [...s.matchAll(LABEL)].map((m) => m.index + m[0].length);
-  const ends = new Set(labelEnds);
+  const labels = new Map<number, LabelEnd>();
+  const add = (m: RegExpExecArray, worded: boolean) => {
+    const end = m.index + m[0].length;
+    const l = labels.get(end) ?? { worded, tokensOnly: true, singular: false };
+    const tokensOnly = l.tokensOnly && m[1] !== undefined && m[2] !== undefined;
+    const singular = l.singular || (!worded && m[2] === undefined);
+    labels.set(end, { worded: worded || l.worded, tokensOnly, singular });
+  };
+  eachMatch(s, BARE_LABEL, (m) => add(m, false));
+  for (const re of WORDED_LABELS) {
+    eachMatch(s, re, (m) => {
+      if (m[1] === undefined || !METERING.test(m[3] ?? "")) {
+        add(m, true);
+      }
+    });
+  }
   const out: [number, number][] = [];
   let end = 0;
-  for (const labelEnd of labelEnds) {
-    const start = skip(s, labelEnd, true);
+  for (const [labelEnd, label] of [...labels].sort((a, b) => a[0] - b[0])) {
+    const start = valueStart(s, labelEnd);
     // Linear for glued labels: values start in order, so one inside the previous run ends where it does, and any eight
     // code units hold at least four code points.
     end = start < end ? end : skip(s, start, false);
-    if (ends.has(end) || charCount(s.slice(start, Math.min(end, start + 8))) < 4) {
+    const run = s.slice(start, end);
+    const blank = labels.get(end)?.singular === true;
+    if (blank || (label.worded && EMAILS.test(unwrapped(run))) || (label.tokensOnly && NUMBER.test(run))) {
       continue;
     }
-    out.push([start, end]);
+    const stop = valueEnd(s, start, end, labels);
+    if (charCount(s.slice(start, Math.min(stop, start + 8))) >= 4) {
+      out.push([start, stop]);
+    }
   }
   return out;
+}
+
+// eachMatch passes found the match at every start, so a label inside another's words is found too.
+function eachMatch(s: string, re: RegExp, found: (m: RegExpExecArray) => void): void {
+  re.lastIndex = 0;
+  // Every label starts with an ASCII letter, so index + 1 is never inside a surrogate pair.
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    found(m);
+    re.lastIndex = m.index + 1;
+  }
+}
+
+const asciiAlnum = (cp: number) => (cp >= 0x30 && cp <= 0x39) || (cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a);
+const lineBreak = (cp: number) => cp === 0x0a || cp === 0x2028 || cp === 0x2029;
+
+function valueStart(s: string, i: number): number {
+  i = skip(s, i, true);
+  for (let n = 0; ; ) {
+    const end = separatorEnd(s, i);
+    const counted = end >= 0 && /[^>]/.test(s.slice(i, end));
+    if (end < 0 || (counted && n === 2)) {
+      return i;
+    }
+    if (counted) {
+      n++;
+    }
+    i = skip(s, end, true);
+  }
+}
+
+function separatorEnd(s: string, i: number): number {
+  for (let n = 0; ; n++) {
+    if (i >= s.length) {
+      return n > 0 ? i : -1;
+    }
+    const cp = s.codePointAt(i) ?? 0;
+    if (spaceCode(cp)) {
+      return n > 0 ? i : -1;
+    }
+    if (n === 3 || asciiAlnum(cp)) {
+      return -1;
+    }
+    i += width(cp);
+  }
+}
+
+function valueEnd(s: string, start: number, end: number, labels: Map<number, LabelEnd>): number {
+  end = Math.max(end, quoteEnd(s, start));
+  for (let from = start; !/[0-9A-Za-z]/.test(s.slice(from, end)); ) {
+    let next = end;
+    while (next < s.length) {
+      const cp = s.codePointAt(next) ?? 0;
+      if (!spaceCode(cp) || lineBreak(cp)) {
+        break;
+      }
+      next += width(cp);
+    }
+    const stop = skip(s, next, false);
+    if (stop === next || labels.get(stop)?.singular) {
+      break;
+    }
+    [from, end] = [next, stop];
+  }
+  return end;
+}
+
+const QUOTES = new Map([
+  [0x22, 0x22],
+  [0x27, 0x27],
+  [0x60, 0x60],
+  [0x201c, 0x201d],
+  [0x2018, 0x2019],
+]);
+const MAX_QUOTED = 64;
+const WRAPPERS = new Map<number, number>([...QUOTES, [0x3c, 0x3e], [0x28, 0x29]]);
+
+function quoteEnd(s: string, start: number): number {
+  const closing = QUOTES.get(s.codePointAt(start) ?? -1);
+  if (closing === undefined) {
+    return start;
+  }
+  let i = start + 1;
+  for (let n = 0; n < MAX_QUOTED && i < s.length; n++) {
+    const cp = s.codePointAt(i) ?? 0;
+    i += width(cp);
+    if (lineBreak(cp)) {
+      break;
+    }
+    if (cp === closing && !asciiAlnum(s.codePointAt(i) ?? -1)) {
+      return i;
+    }
+  }
+  return start;
+}
+
+// unwrapped is v without one layer of <>, () or quotes around it; every opener and closer is one code unit.
+function unwrapped(v: string): string {
+  const closing = WRAPPERS.get(v.codePointAt(0) ?? -1);
+  return v.length > 1 && closing !== undefined && v.charCodeAt(v.length - 1) === closing ? v.slice(1, -1) : v;
 }
 
 function skip(s: string, i: number, space: boolean): number {
@@ -347,7 +489,7 @@ const SECRET_PATTERNS: { code: string; find: Finder }[] = [
   { code: "azure_sas", find: pattern(/[?&]sig=([A-Za-z0-9_%/+=]{16,})/dgu, 1) },
   { code: "anthropic_key", find: pattern(/\bsk-ant-[A-Za-z0-9_-]{20,}/dgu) },
   { code: "openai_key", find: pattern(/\bsk-[A-Za-z0-9_-]{20,}/dgu) },
-  { code: "aws_access_key", find: pattern(/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/dgu) },
+  { code: "aws_access_key", find: pattern(/(?:^|[^0-9A-Z])((?:AKIA|ASIA)[0-9A-Z]{16,})/dgu, 1) },
   { code: "github_token", find: pattern(/\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})\b/dgu) },
   { code: "password_line", find: labelValues },
 ];
