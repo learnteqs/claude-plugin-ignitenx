@@ -24031,7 +24031,6 @@ var EMOJI_BASES = [
   [9742, 9742],
   [9745, 9745],
   [9752, 9752],
-  [9757, 9757],
   [9760, 9760],
   [9762, 9763],
   [9766, 9766],
@@ -24060,10 +24059,9 @@ var EMOJI_BASES = [
   [9961, 9961],
   [9968, 9969],
   [9972, 9972],
-  [9975, 9977],
+  [9975, 9976],
   [9986, 9986],
   [9992, 9993],
-  [9996, 9997],
   [9999, 9999],
   [10002, 10002],
   [10004, 10004],
@@ -24092,7 +24090,7 @@ var EMOJI_BASES = [
   [127894, 127895],
   [127897, 127899],
   [127902, 127903],
-  [127947, 127950],
+  [127949, 127950],
   [127956, 127967],
   [127987, 127987],
   [127989, 127989],
@@ -24102,10 +24100,10 @@ var EMOJI_BASES = [
   [128253, 128253],
   [128329, 128330],
   [128367, 128368],
-  [128371, 128377],
+  [128371, 128371],
+  [128374, 128377],
   [128391, 128391],
   [128394, 128397],
-  [128400, 128400],
   [128421, 128421],
   [128424, 128424],
   [128433, 128434],
@@ -24125,6 +24123,96 @@ var EMOJI_BASES = [
   [128745, 128745],
   [128752, 128752],
   [128755, 128755]
+];
+var QUIET_BASES = [
+  [8986, 8987],
+  [9193, 9196],
+  [9200, 9200],
+  [9203, 9203],
+  [9725, 9726],
+  [9748, 9749],
+  [9757, 9757],
+  [9800, 9811],
+  [9855, 9855],
+  [9875, 9875],
+  [9889, 9889],
+  [9898, 9899],
+  [9917, 9918],
+  [9924, 9925],
+  [9934, 9934],
+  [9940, 9940],
+  [9962, 9962],
+  [9970, 9971],
+  [9973, 9973],
+  [9977, 9978],
+  [9981, 9981],
+  [9989, 9989],
+  [9994, 9997],
+  [10024, 10024],
+  [10060, 10060],
+  [10062, 10062],
+  [10067, 10069],
+  [10071, 10071],
+  [10133, 10135],
+  [10160, 10160],
+  [10175, 10175],
+  [11035, 11036],
+  [11088, 11088],
+  [11093, 11093],
+  [126980, 126980],
+  [127514, 127514],
+  [127535, 127535],
+  [127757, 127759],
+  [127765, 127765],
+  [127772, 127772],
+  [127864, 127864],
+  [127891, 127891],
+  [127911, 127911],
+  [127916, 127918],
+  [127938, 127938],
+  [127940, 127940],
+  [127942, 127942],
+  [127946, 127948],
+  [127968, 127968],
+  [127981, 127981],
+  [128008, 128008],
+  [128021, 128021],
+  [128031, 128031],
+  [128038, 128038],
+  [128066, 128066],
+  [128070, 128073],
+  [128077, 128078],
+  [128083, 128083],
+  [128106, 128106],
+  [128125, 128125],
+  [128163, 128163],
+  [128176, 128176],
+  [128179, 128179],
+  [128187, 128187],
+  [128191, 128191],
+  [128203, 128203],
+  [128218, 128218],
+  [128223, 128223],
+  [128228, 128230],
+  [128234, 128237],
+  [128247, 128247],
+  [128249, 128251],
+  [128264, 128264],
+  [128269, 128269],
+  [128274, 128275],
+  [128336, 128359],
+  [128372, 128373],
+  [128400, 128400],
+  [128528, 128528],
+  [128647, 128647],
+  [128653, 128653],
+  [128657, 128657],
+  [128660, 128660],
+  [128664, 128664],
+  [128685, 128685],
+  [128690, 128690],
+  [128697, 128698],
+  [128700, 128700]
 ];
 function rangeAt(ranges, cp) {
   let lo = 0;
@@ -24146,6 +24234,7 @@ function hiddenClass(cp) {
 var VS16 = 65039;
 var KEYCAP = 8419;
 var emojiBase = (cp) => rangeAt(EMOJI_BASES, cp) !== void 0;
+var quietBase = (cp) => rangeAt(QUIET_BASES, cp) !== void 0;
 var keycapBase = (cp) => cp === 35 || cp === 42 || cp >= 48 && cp <= 57;
 function hiddenAt(prev, cp, next) {
   if (cp !== VS16) {
@@ -24153,17 +24242,18 @@ function hiddenAt(prev, cp, next) {
   }
   return !emojiBase(prev) || keycapBase(prev) && next !== KEYCAP ? VARIATION_SELECTOR : "";
 }
-function scan(s, lines, visit) {
+var QUIET = "quiet";
+function scan(s, normalizing, visit) {
   let prev = -1;
   for (let i = 0; i < s.length; ) {
     let cp = s.codePointAt(i) ?? 0;
     let n = width(cp);
-    if (lines && cp === 13) {
+    if (normalizing && cp === 13) {
       cp = 10;
       n = s.charCodeAt(i + 1) === 10 ? 2 : 1;
     }
-    const hidden = hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
-    if (hidden === "") {
+    const hidden = normalizing && cp === VS16 && quietBase(prev) ? QUIET : hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
+    if (hidden === "" || hidden === QUIET) {
       prev = cp;
     }
     if (visit(i, n, hidden) === true) {
@@ -24225,10 +24315,10 @@ function normalizeText(s) {
   const counts2 = /* @__PURE__ */ new Map();
   let out = "";
   scan(raw, true, (at, n, hidden) => {
-    if (hidden !== "") {
-      bump(counts2, hidden);
-    } else {
+    if (hidden === "") {
       out += raw.charCodeAt(at) === 13 ? "\n" : raw.slice(at, at + n);
+    } else if (hidden !== QUIET) {
+      bump(counts2, hidden);
     }
   });
   return { text: trimSpace(out), stripped: ordered(HIDDEN_CLASSES, counts2) };
@@ -24360,6 +24450,8 @@ function redact(s) {
   }
   return { text: s, redactions: ordered(SECRET_KINDS, counts2) };
 }
+var COUNTED = 1;
+var QUIETLY = 2;
 function mapNormalized(raw) {
   let text = "";
   const from = [];
@@ -24367,7 +24459,7 @@ function mapNormalized(raw) {
   const removed = new Uint8Array(raw.length);
   scan(raw, true, (at, n, hidden) => {
     if (hidden !== "") {
-      removed.fill(1, at, at + n);
+      removed.fill(hidden === QUIET ? QUIETLY : COUNTED, at, at + n);
     } else if (raw.charCodeAt(at) === 13) {
       text += "\n";
       from.push(at);
@@ -24396,10 +24488,17 @@ function redactRaw(raw) {
     let last = 0;
     for (const sp of spans) {
       const start = from[sp.start] ?? raw.length;
-      const end = to[sp.end - 1] ?? start;
+      let end = to[sp.end - 1] ?? start;
+      let next = end;
+      while (removed[next] === COUNTED) {
+        next++;
+      }
+      if (removed[next] === QUIETLY) {
+        end = next + 1;
+      }
       out += raw.slice(last, start) + REDACTED;
       for (let k = start; k < end; k++) {
-        out += removed[k] === 1 ? raw[k] : "";
+        out += removed[k] === COUNTED ? raw[k] : "";
       }
       last = end;
       bump(counts2, sp.code);

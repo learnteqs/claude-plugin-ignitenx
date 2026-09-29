@@ -30,9 +30,11 @@ only the names of the model's own argument keys. The model does see the pasted t
 
 Before sending, it replaces every secret in the pasted text with `[redacted]`, the same way TM does, and sends the rest
 exactly as pasted. So hidden characters (zero-width, bidi and tag characters, and the like) still reach TM, which strips
-and counts them itself and raises its `hidden_text` check. TM then checks everything again. The result carries
-`redactions`, the secrets replaced by the plugin and by TM together, and `hiddenCharacters`, the hidden characters in
-the paste by kind.
+and counts them itself and raises its `hidden_text` check. The plugin and TM read them from the same Unicode 16.0
+tables: an emoji selector (U+FE0F) stays only after an emoji drawn as text by default (after #, * or a digit, only
+before U+20E3); the first one after an emoji already drawn in colour is removed without being counted, and any other is
+counted as hidden. TM then checks everything again. The result carries `redactions`, the secrets replaced by the plugin
+and by TM together, and `hiddenCharacters`, the hidden characters in the paste by kind.
 
 > [!WARNING]
 > **Do not enable this plugin in your everyday Claude Code.** Its hook applies to the whole session: while the plugin

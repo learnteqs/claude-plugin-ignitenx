@@ -18,7 +18,10 @@ reserved or messaged. Needs a Tenant Manager with the provisioning API (`/api/tm
   - a secret or a URL in any value.
 
   It then replaces the secrets in the pasted text with `[redacted]`, with the same text vectors as TM, and sends the
-  rest as pasted, so TM strips and counts hidden characters itself and raises its `hidden_text` check.
+  rest as pasted, so TM strips and counts hidden characters itself and raises its `hidden_text` check. Both read
+  hidden characters from TM's literal Unicode 16.0 tables (learnteqs/ignitenx#5007, #5021): an emoji selector (U+FE0F)
+  stays only after an emoji drawn as text by default, the first one after an emoji already drawn in colour is removed
+  without being counted, and any other is counted as hidden.
   - One submit per tpa-mcp process: a Claude session normally has one, and a reconnect starts a new process. A second
     submit gets `already_submitted`.
   - A spec TM rejects doesn't use up the session. After 3 rejections the next submit is refused with `too_many_attempts`.

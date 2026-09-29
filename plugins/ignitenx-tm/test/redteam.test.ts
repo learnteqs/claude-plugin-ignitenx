@@ -9,7 +9,7 @@ import { loadConfig } from "../src/identity.js";
 import { OptionsCache } from "../src/options.js";
 import { FIELD_PATHS, SubmitInputSchema, type FieldPath, type SubmitInput } from "../src/spec.js";
 import { Submitter, type SubmitResult } from "../src/submit.js";
-import { hiddenClass, normalizeText, redact, redactRaw } from "../src/text.js";
+import { normalizeText, redact, redactRaw } from "../src/text.js";
 import { TMClient } from "../src/tm-client.js";
 import { TEST_KEY, TEST_TOKEN, meFor } from "./fake-tm.js";
 
@@ -174,8 +174,6 @@ interface Case {
   hostile: Hostile[];
   sent?: (body: Record<string, any>, raw: string, text: string, result: SubmitResult) => void;
 }
-
-const hiddenIn = (s: string) => [...s].filter((ch) => hiddenClass(ch.codePointAt(0) ?? 0) !== "");
 
 const set = (path: string, value: unknown): Change => (m) => {
   const keys = path.split(".");
@@ -547,7 +545,7 @@ const CASES: Case[] = [
     sent: (body, raw, text, result) => {
       // Every hidden character reaches TM in place, so TM's own hidden_text check sees what the paste had.
       expect(body.sourceText).toBe(text);
-      expect(hiddenIn(body.sourceText)).toEqual(hiddenIn(text));
+      expect(normalizeText(body.sourceText).stripped).toEqual(normalizeText(text).stripped);
       expect(result.hiddenCharacters).toEqual([
         { code: "bidi_control", count: 4 },
         { code: "zero_width", count: 3 },

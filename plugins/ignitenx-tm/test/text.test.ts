@@ -22,7 +22,7 @@ import {
 
 // Byte copy of TM's spec/testdata/text-vectors.json; TM pins the same hash, so update both together.
 const VECTORS_URL = new URL("./fixtures/text-vectors.json", import.meta.url);
-const VECTORS_SHA256 = "sha256:7b05d93157d9ed272b6f72ffe0eb03d4a17bbd2940a6250df43d8d95a055d7de";
+const VECTORS_SHA256 = "sha256:8585b997dd57514547fb4df3ad70e47b16eaa173a8eecc1cfe4341a1c79a5bd5";
 
 interface Vector {
   name: string;
@@ -42,6 +42,18 @@ const tmk = `tmk_0123456789abcdef_${"A".repeat(43)}`;
 const cps = (...codes: number[]) => String.fromCodePoint(...codes);
 const VS16 = cps(0xfe0f);
 const KEYCAP = cps(0x20e3);
+const ZWSP = cps(0x200b);
+const STAR = cps(0x2b50);
+
+// selected lists, sorted, the code points a VS16 follows in s.
+const selected = (s: string) => {
+  const out = new Set<number>();
+  for (let i = s.indexOf(VS16); i > 0; i = s.indexOf(VS16, i + 1)) {
+    out.add(s.codePointAt(i - (s.charCodeAt(i - 1) >= 0xdc00 && s.charCodeAt(i - 1) <= 0xdfff ? 2 : 1)) ?? 0);
+  }
+  return [...out].sort((a, b) => a - b);
+};
+const selectorsCounted = (stripped: Count[]) => stripped.find((c) => c.code === "variation_selector")?.count ?? 0;
 
 describe("text vectors shared with TM", () => {
   test("the fixture is TM's file, byte for byte", () => {
@@ -65,27 +77,43 @@ describe("text vectors shared with TM", () => {
     expect(isFreeText(v.input)).toBe(v.freeText);
   });
 
-  // The vector that lists every emoji base must list exactly the port's, so a port with another table fails it.
-  test("the emoji bases are exactly those the vector lists", () => {
-    const every = vectors.find((v) => v.name === "every emoji base keeps its selector");
-    expect(every).toBeDefined();
-    const selected = (s: string) => {
-      const out = new Set<number>();
-      for (let i = s.indexOf(VS16); i > 0; i = s.indexOf(VS16, i + 1)) {
-        out.add(s.codePointAt(i - (s.charCodeAt(i - 1) >= 0xdc00 && s.charCodeAt(i - 1) <= 0xdfff ? 2 : 1)) ?? 0);
-      }
-      return [...out].sort((a, b) => a - b);
-    };
-    const listed = selected(every?.input ?? "");
-    expect(listed.length).toBe(219);
-    // Every code point in turn, after a space and before VS16 and U+20E3: VS16 stays exactly after an emoji base.
-    const probe: string[] = [];
+  // The vectors that list the emoji bases and the colour emoji must list exactly the port's tables, so a port with
+  // another table fails them.
+  const listedIn = (name: string) => {
+    const every = vectors.find((v) => v.name === name);
+    expect(every, name).toBeDefined();
+    return selected(every?.input ?? "");
+  };
+  const probe = (tail: string) => {
+    const out: string[] = [];
     for (let cp = 0; cp <= 0x10ffff; cp++) {
       if (cp < 0xd800 || cp > 0xdfff) {
-        probe.push(" ", String.fromCodePoint(cp), VS16, KEYCAP);
+        out.push(" ", String.fromCodePoint(cp), tail);
       }
     }
-    expect(selected(normalizeText(probe.join("")).text)).toEqual(listed);
+    return out.join("");
+  };
+
+  test("the emoji bases are exactly those the vector lists", () => {
+    const listed = listedIn("every emoji base keeps its selector");
+    expect(listed.length).toBe(210);
+    // Every code point in turn, after a space and before VS16 and U+20E3: VS16 stays exactly after an emoji base.
+    expect(selected(normalizeText(probe(VS16 + KEYCAP)).text)).toEqual(listed);
+  });
+
+  test("the colour emoji are exactly those the vector lists", () => {
+    const listed = listedIn("every colour emoji loses its selector quietly");
+    expect(listed.length).toBe(161);
+    for (const cp of listed) {
+      expect(normalizeText(cps(cp, 0xfe0f)), cp.toString(16)).toEqual({ text: cps(cp), stripped: [] });
+    }
+    // Every code point in turn, after a space and before VS16: each VS16 is kept, counted, or removed quietly, and
+    // only as many are removed quietly as the vector lists.
+    const without = normalizeText(probe(""));
+    const withVS16 = normalizeText(probe(VS16));
+    const counted = selectorsCounted(withVS16.stripped) - selectorsCounted(without.stripped);
+    const kept = withVS16.text.split(VS16).length - 1;
+    expect(0x110000 - 0x800 - counted - kept).toBe(listed.length);
   });
 });
 
@@ -108,6 +136,35 @@ describe("normalizeText", () => {
       { code: "tag_character", count: 1 },
       { code: "variation_selector", count: 1 },
     ]);
+  });
+
+  test.each<[string, string, string, Count[]]>([
+    ["removes a colour emoji's selector without counting it", STAR + VS16, STAR, []],
+    [
+      "counts every selector after the first",
+      STAR + VS16 + VS16 + VS16,
+      STAR,
+      [{ code: "variation_selector", count: 2 }],
+    ],
+    [
+      "judges the selector by the last kept character",
+      `${STAR}${ZWSP}${VS16}${ZWSP}${VS16}`,
+      STAR,
+      [
+        { code: "zero_width", count: 2 },
+        { code: "variation_selector", count: 1 },
+      ],
+    ],
+    ["removes a hand gesture's selector quietly", cps(0x270c, 0xfe0f, 0x20), cps(0x270c), []],
+    [
+      "counts a second selector after a text-style emoji",
+      cps(0x2764, 0xfe0f, 0xfe0f),
+      cps(0x2764, 0xfe0f),
+      [{ code: "variation_selector", count: 1 }],
+    ],
+  ])("%s", (_, input, text, stripped) => {
+    expect(normalizeText(input)).toEqual({ text, stripped });
+    expect(normalizeText(text)).toEqual({ text, stripped: [] });
   });
 
   test("trims TM's whitespace set, not JavaScript's", () => {
@@ -144,7 +201,8 @@ describe("normalizeText", () => {
     ["a base beyond the BMP keeps its selector", cps(0x1f170, 0xfe0f), false],
     ["a keycap keeps its selector", cps(0x23, 0xfe0f, 0x20e3), false],
     ["a selector after a letter is hidden", cps(0x41, 0xfe0f), true],
-    ["a selector after an emoji-style emoji is hidden", cps(0x2705, 0xfe0f), true],
+    ["a selector after a colour emoji is hidden", cps(0x2705, 0xfe0f), true],
+    ["a selector after a hand gesture is hidden", cps(0x270c, 0xfe0f), true],
     ["a second selector is hidden", cps(0x2764, 0xfe0f, 0xfe0f), true],
     ["a digit's selector before another mark is hidden", cps(0x37, 0xfe0f, 0x20dd), true],
     ["a leading selector is hidden", cps(0xfe0f, 0x2764), true],
@@ -248,6 +306,31 @@ describe("redactRaw", () => {
       `${REDACTED}${cps(0x200b, 0x20e3)}`,
     ],
     ["a selector the secret leaves stays where it was", `AKIAIOSFODNN7EXAMPLE${VS16} x`, `${REDACTED}${VS16} x`],
+    [
+      "a selector removed quietly inside a secret does not follow the token",
+      `password: Sun${STAR}${VS16}ny24 ok`,
+      `password: ${REDACTED} ok`,
+    ],
+    [
+      "a selector removed quietly after a secret's last character goes with it",
+      `Password: Sunny2024${STAR}${VS16}`,
+      `Password: ${REDACTED}`,
+    ],
+    [
+      "so does one past a counted character, which follows the token",
+      `Password: Sunny2024${STAR}${ZWSP}${VS16} ok`,
+      `Password: ${REDACTED}${ZWSP} ok`,
+    ],
+    [
+      "a counted selector after a secret stays after the token and is still counted",
+      `Password: Sunny2024${STAR}${VS16}${VS16} ok`,
+      `Password: ${REDACTED}${VS16} ok`,
+    ],
+    [
+      "a URL password ending in a colour emoji takes its quiet selector",
+      `x://u:pa${STAR}${VS16}@h`,
+      `x://u:${REDACTED}@h`,
+    ],
   ])("%s", (_, input, want) => {
     const r = redactRaw(input);
     expect(r.text).toBe(want);
@@ -300,7 +383,15 @@ describe("redactRaw", () => {
     let redacted = 0;
     let hiddenInside = 0;
     let selectorsTaken = 0;
+    let quietTaken = 0;
     const selectors = (s: string) => s.split(VS16).length;
+    // The VS16s normalizeText removes without counting: all it removes, less those it counts (its variation_selector
+    // count, less the other selectors).
+    const quiet = (s: string) => {
+      const n = normalizeText(s);
+      const others = [...s].filter((ch) => ch !== VS16 && hiddenClass(ch.codePointAt(0) ?? 0) === "variation_selector");
+      return selectors(s) - selectors(n.text) - selectorsCounted(n.stripped) + others.length;
+    };
     for (const input of generate(4000, 20260929)) {
       const r = redactRaw(input);
       const n = normalizeText(input);
@@ -313,11 +404,13 @@ describe("redactRaw", () => {
       redacted += red.redactions.length > 0 ? 1 : 0;
       hiddenInside += hiddenAfterToken(r.text) ? 1 : 0;
       selectorsTaken += selectors(red.text) < selectors(n.text) ? 1 : 0;
+      quietTaken += quiet(r.text) < quiet(input) ? 1 : 0;
     }
     expect(failures.slice(0, 3)).toEqual([]);
     expect(redacted).toBeGreaterThan(2000);
     expect(hiddenInside).toBeGreaterThan(1000);
     expect(selectorsTaken).toBeGreaterThan(100);
+    expect(quietTaken).toBeGreaterThan(1000);
   });
 });
 
@@ -415,9 +508,13 @@ function generate(count: number, seed: number): string[] {
     }
   }
   const BASES = [0x23, 0x2a, 0x30, 0x31, 0x39, 0xa9, 0x2139, 0x2764, 0x2b07, 0x3030, 0x1f170, 0x1f321, 0x1f6f3];
-  const NOT_BASES = [0x41, 0x3d, 0x2192, 0x2605, 0x2705, 0x231a, 0x1f44d, 0x1f600, 0x1fae9, 0x20e3, 0xfe0f];
+  const QUIET = [0x231a, 0x261d, 0x2705, 0x270c, 0x26f9, 0x2b50, 0x1f004, 0x1f44d, 0x1f590, 0x1f6bc];
+  const NOT_BASES = [0x41, 0x3d, 0x2192, 0x2605, 0x1f600, 0x1fae9, 0x20e3, 0xfe0f];
+  const colour = () => cps(pick(QUIET));
+  const selectorRun = () =>
+    pick(["", VS16, VS16 + VS16, VS16 + VS16 + VS16, `${hidden()}${VS16}`, `${VS16}${hidden()}${VS16}`]);
   const emoji = () =>
-    cps(pick(int(2) === 0 ? BASES : NOT_BASES)) +
+    cps(pick(pick([BASES, QUIET, NOT_BASES]))) +
     pick(["", VS16, VS16 + VS16, VS16 + KEYCAP, KEYCAP, `${VS16}${hidden()}${KEYCAP}`, `${hidden()}${VS16}${KEYCAP}`]);
   const hidden = (): string =>
     pick([
@@ -472,6 +569,11 @@ function generate(count: number, seed: number): string[] {
       emoji,
       () => secret() + emoji(),
       () => `${secret()}${pick(["", "1", "#"])}${VS16}${KEYCAP}`,
+      // A colour emoji's quiet selector inside a secret, and right after one's last character.
+      () => `${labelled()}${colour()}${selectorRun()}${pick(["", "ab", " ok"])}`,
+      () => `${pick(LABELS)}: ab${colour()}${selectorRun()}cd${pick(["", colour() + VS16])}`,
+      () => `x://u:${str(ALNUM, 1 + int(4))}${colour()}${selectorRun()}@h`,
+      () => colour() + selectorRun(),
       () => cp(0x20, 0x2fff),
       () => cp(0x10000, 0x1ffff),
       () => pick(["\ud800", "\udc00"]),

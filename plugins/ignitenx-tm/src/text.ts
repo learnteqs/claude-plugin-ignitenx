@@ -15,7 +15,7 @@ const TAG_CHARACTER = "tag_character";
 const VARIATION_SELECTOR = "variation_selector";
 const HIDDEN_CLASSES = [CONTROL, BIDI_CONTROL, ZERO_WIDTH, TAG_CHARACTER, VARIATION_SELECTOR];
 
-// TM's two tables are literal, as here, so that no runtime's Unicode version decides what is hidden.
+// TM's three tables are literal, as here, so that no runtime's Unicode version decides what is hidden.
 // TM's hiddenRanges, sorted: every control but tab and LF and every format or default-ignorable character but VS16.
 const HIDDEN_RANGES: [number, number, string][] = [
   [0x0000, 0x0008, CONTROL],
@@ -55,32 +55,54 @@ const HIDDEN_RANGES: [number, number, string][] = [
   [0xe01f0, 0xe0fff, TAG_CHARACTER],
 ];
 
-// TM's emojiBases, sorted: they take VS16 in Unicode 16.0's emoji-variation-sequences.txt and are text-style by default
-// (Emoji_Presentation=No), so VS16 visibly changes them.
-// 219 code points in 119 ranges.
+// TM's emojiBases, sorted: they take VS16 in Unicode 16.0's emoji-variation-sequences.txt and draw as text by default,
+// so VS16 visibly changes them.
+// 210 code points in 117 ranges.
 const EMOJI_BASES: [number, number][] = [
   [0x0023, 0x0023], [0x002a, 0x002a], [0x0030, 0x0039], [0x00a9, 0x00a9], [0x00ae, 0x00ae], [0x203c, 0x203c],
   [0x2049, 0x2049], [0x2122, 0x2122], [0x2139, 0x2139], [0x2194, 0x2199], [0x21a9, 0x21aa], [0x2328, 0x2328],
   [0x23cf, 0x23cf], [0x23ed, 0x23ef], [0x23f1, 0x23f2], [0x23f8, 0x23fa], [0x24c2, 0x24c2], [0x25aa, 0x25ab],
   [0x25b6, 0x25b6], [0x25c0, 0x25c0], [0x25fb, 0x25fc], [0x2600, 0x2604], [0x260e, 0x260e], [0x2611, 0x2611],
-  [0x2618, 0x2618], [0x261d, 0x261d], [0x2620, 0x2620], [0x2622, 0x2623], [0x2626, 0x2626], [0x262a, 0x262a],
-  [0x262e, 0x262f], [0x2638, 0x263a], [0x2640, 0x2640], [0x2642, 0x2642], [0x265f, 0x2660], [0x2663, 0x2663],
-  [0x2665, 0x2666], [0x2668, 0x2668], [0x267b, 0x267b], [0x267e, 0x267e], [0x2692, 0x2692], [0x2694, 0x2697],
-  [0x2699, 0x2699], [0x269b, 0x269c], [0x26a0, 0x26a0], [0x26a7, 0x26a7], [0x26b0, 0x26b1], [0x26c8, 0x26c8],
-  [0x26cf, 0x26cf], [0x26d1, 0x26d1], [0x26d3, 0x26d3], [0x26e9, 0x26e9], [0x26f0, 0x26f1], [0x26f4, 0x26f4],
-  [0x26f7, 0x26f9], [0x2702, 0x2702], [0x2708, 0x2709], [0x270c, 0x270d], [0x270f, 0x270f], [0x2712, 0x2712],
-  [0x2714, 0x2714], [0x2716, 0x2716], [0x271d, 0x271d], [0x2721, 0x2721], [0x2733, 0x2734], [0x2744, 0x2744],
-  [0x2747, 0x2747], [0x2763, 0x2764], [0x27a1, 0x27a1], [0x2934, 0x2935], [0x2b05, 0x2b07], [0x3030, 0x3030],
-  [0x303d, 0x303d], [0x3297, 0x3297], [0x3299, 0x3299], [0x1f170, 0x1f171], [0x1f17e, 0x1f17f], [0x1f202, 0x1f202],
-  [0x1f237, 0x1f237], [0x1f321, 0x1f321], [0x1f324, 0x1f32c], [0x1f336, 0x1f336], [0x1f37d, 0x1f37d],
-  [0x1f396, 0x1f397], [0x1f399, 0x1f39b], [0x1f39e, 0x1f39f], [0x1f3cb, 0x1f3ce], [0x1f3d4, 0x1f3df],
-  [0x1f3f3, 0x1f3f3], [0x1f3f5, 0x1f3f5], [0x1f3f7, 0x1f3f7], [0x1f43f, 0x1f43f], [0x1f441, 0x1f441],
-  [0x1f4fd, 0x1f4fd], [0x1f549, 0x1f54a], [0x1f56f, 0x1f570], [0x1f573, 0x1f579], [0x1f587, 0x1f587],
-  [0x1f58a, 0x1f58d], [0x1f590, 0x1f590], [0x1f5a5, 0x1f5a5], [0x1f5a8, 0x1f5a8], [0x1f5b1, 0x1f5b2],
-  [0x1f5bc, 0x1f5bc], [0x1f5c2, 0x1f5c4], [0x1f5d1, 0x1f5d3], [0x1f5dc, 0x1f5de], [0x1f5e1, 0x1f5e1],
-  [0x1f5e3, 0x1f5e3], [0x1f5e8, 0x1f5e8], [0x1f5ef, 0x1f5ef], [0x1f5f3, 0x1f5f3], [0x1f5fa, 0x1f5fa],
-  [0x1f6cb, 0x1f6cb], [0x1f6cd, 0x1f6cf], [0x1f6e0, 0x1f6e5], [0x1f6e9, 0x1f6e9], [0x1f6f0, 0x1f6f0],
-  [0x1f6f3, 0x1f6f3],
+  [0x2618, 0x2618], [0x2620, 0x2620], [0x2622, 0x2623], [0x2626, 0x2626], [0x262a, 0x262a], [0x262e, 0x262f],
+  [0x2638, 0x263a], [0x2640, 0x2640], [0x2642, 0x2642], [0x265f, 0x2660], [0x2663, 0x2663], [0x2665, 0x2666],
+  [0x2668, 0x2668], [0x267b, 0x267b], [0x267e, 0x267e], [0x2692, 0x2692], [0x2694, 0x2697], [0x2699, 0x2699],
+  [0x269b, 0x269c], [0x26a0, 0x26a0], [0x26a7, 0x26a7], [0x26b0, 0x26b1], [0x26c8, 0x26c8], [0x26cf, 0x26cf],
+  [0x26d1, 0x26d1], [0x26d3, 0x26d3], [0x26e9, 0x26e9], [0x26f0, 0x26f1], [0x26f4, 0x26f4], [0x26f7, 0x26f8],
+  [0x2702, 0x2702], [0x2708, 0x2709], [0x270f, 0x270f], [0x2712, 0x2712], [0x2714, 0x2714], [0x2716, 0x2716],
+  [0x271d, 0x271d], [0x2721, 0x2721], [0x2733, 0x2734], [0x2744, 0x2744], [0x2747, 0x2747], [0x2763, 0x2764],
+  [0x27a1, 0x27a1], [0x2934, 0x2935], [0x2b05, 0x2b07], [0x3030, 0x3030], [0x303d, 0x303d], [0x3297, 0x3297],
+  [0x3299, 0x3299], [0x1f170, 0x1f171], [0x1f17e, 0x1f17f], [0x1f202, 0x1f202], [0x1f237, 0x1f237], [0x1f321, 0x1f321],
+  [0x1f324, 0x1f32c], [0x1f336, 0x1f336], [0x1f37d, 0x1f37d], [0x1f396, 0x1f397], [0x1f399, 0x1f39b],
+  [0x1f39e, 0x1f39f], [0x1f3cd, 0x1f3ce], [0x1f3d4, 0x1f3df], [0x1f3f3, 0x1f3f3], [0x1f3f5, 0x1f3f5],
+  [0x1f3f7, 0x1f3f7], [0x1f43f, 0x1f43f], [0x1f441, 0x1f441], [0x1f4fd, 0x1f4fd], [0x1f549, 0x1f54a],
+  [0x1f56f, 0x1f570], [0x1f573, 0x1f573], [0x1f576, 0x1f579], [0x1f587, 0x1f587], [0x1f58a, 0x1f58d],
+  [0x1f5a5, 0x1f5a5], [0x1f5a8, 0x1f5a8], [0x1f5b1, 0x1f5b2], [0x1f5bc, 0x1f5bc], [0x1f5c2, 0x1f5c4],
+  [0x1f5d1, 0x1f5d3], [0x1f5dc, 0x1f5de], [0x1f5e1, 0x1f5e1], [0x1f5e3, 0x1f5e3], [0x1f5e8, 0x1f5e8],
+  [0x1f5ef, 0x1f5ef], [0x1f5f3, 0x1f5f3], [0x1f5fa, 0x1f5fa], [0x1f6cb, 0x1f6cb], [0x1f6cd, 0x1f6cf],
+  [0x1f6e0, 0x1f6e5], [0x1f6e9, 0x1f6e9], [0x1f6f0, 0x1f6f0], [0x1f6f3, 0x1f6f3],
+];
+
+// TM's quietBases, sorted: they take VS16 in that file but draw in colour anyway (Emoji_Presentation or
+// Emoji_Modifier_Base), so VS16 after one changes nothing and is removed without being counted.
+// 161 code points in 88 ranges.
+const QUIET_BASES: [number, number][] = [
+  [0x231a, 0x231b], [0x23e9, 0x23ec], [0x23f0, 0x23f0], [0x23f3, 0x23f3], [0x25fd, 0x25fe], [0x2614, 0x2615],
+  [0x261d, 0x261d], [0x2648, 0x2653], [0x267f, 0x267f], [0x2693, 0x2693], [0x26a1, 0x26a1], [0x26aa, 0x26ab],
+  [0x26bd, 0x26be], [0x26c4, 0x26c5], [0x26ce, 0x26ce], [0x26d4, 0x26d4], [0x26ea, 0x26ea], [0x26f2, 0x26f3],
+  [0x26f5, 0x26f5], [0x26f9, 0x26fa], [0x26fd, 0x26fd], [0x2705, 0x2705], [0x270a, 0x270d], [0x2728, 0x2728],
+  [0x274c, 0x274c], [0x274e, 0x274e], [0x2753, 0x2755], [0x2757, 0x2757], [0x2795, 0x2797], [0x27b0, 0x27b0],
+  [0x27bf, 0x27bf], [0x2b1b, 0x2b1c], [0x2b50, 0x2b50], [0x2b55, 0x2b55], [0x1f004, 0x1f004], [0x1f21a, 0x1f21a],
+  [0x1f22f, 0x1f22f], [0x1f30d, 0x1f30f], [0x1f315, 0x1f315], [0x1f31c, 0x1f31c], [0x1f378, 0x1f378],
+  [0x1f393, 0x1f393], [0x1f3a7, 0x1f3a7], [0x1f3ac, 0x1f3ae], [0x1f3c2, 0x1f3c2], [0x1f3c4, 0x1f3c4],
+  [0x1f3c6, 0x1f3c6], [0x1f3ca, 0x1f3cc], [0x1f3e0, 0x1f3e0], [0x1f3ed, 0x1f3ed], [0x1f408, 0x1f408],
+  [0x1f415, 0x1f415], [0x1f41f, 0x1f41f], [0x1f426, 0x1f426], [0x1f442, 0x1f442], [0x1f446, 0x1f449],
+  [0x1f44d, 0x1f44e], [0x1f453, 0x1f453], [0x1f46a, 0x1f46a], [0x1f47d, 0x1f47d], [0x1f4a3, 0x1f4a3],
+  [0x1f4b0, 0x1f4b0], [0x1f4b3, 0x1f4b3], [0x1f4bb, 0x1f4bb], [0x1f4bf, 0x1f4bf], [0x1f4cb, 0x1f4cb],
+  [0x1f4da, 0x1f4da], [0x1f4df, 0x1f4df], [0x1f4e4, 0x1f4e6], [0x1f4ea, 0x1f4ed], [0x1f4f7, 0x1f4f7],
+  [0x1f4f9, 0x1f4fb], [0x1f508, 0x1f508], [0x1f50d, 0x1f50d], [0x1f512, 0x1f513], [0x1f550, 0x1f567],
+  [0x1f574, 0x1f575], [0x1f590, 0x1f590], [0x1f610, 0x1f610], [0x1f687, 0x1f687], [0x1f68d, 0x1f68d],
+  [0x1f691, 0x1f691], [0x1f694, 0x1f694], [0x1f698, 0x1f698], [0x1f6ad, 0x1f6ad], [0x1f6b2, 0x1f6b2],
+  [0x1f6b9, 0x1f6ba], [0x1f6bc, 0x1f6bc],
 ];
 
 // rangeAt is the range of sorted, disjoint ranges that holds cp, found as TM's sort.Search finds it.
@@ -106,6 +128,7 @@ export function hiddenClass(cp: number): string {
 const VS16 = 0xfe0f;
 const KEYCAP = 0x20e3;
 const emojiBase = (cp: number) => rangeAt(EMOJI_BASES, cp) !== undefined;
+const quietBase = (cp: number) => rangeAt(QUIET_BASES, cp) !== undefined;
 const keycapBase = (cp: number) => cp === 0x23 || cp === 0x2a || (cp >= 0x30 && cp <= 0x39);
 
 // hiddenAt keeps VS16 only if prev (the last kept code point) is an emoji base and, for a keycap base, next (raw) is
@@ -117,21 +140,26 @@ function hiddenAt(prev: number, cp: number, next: number): string {
   return !emojiBase(prev) || (keycapBase(prev) && next !== KEYCAP) ? VARIATION_SELECTOR : "";
 }
 
-// scan judges each code point of s in turn with hiddenAt and calls visit with its UTF-16 offset, its length and its
-// class, "" if kept; visit returns true to stop. With lines, a CR or CRLF is one kept LF, as normalizeText makes it
-// before judging (a next CR reads as the LF it becomes: only U+20E3 matters there); without, a CR is a control, as
-// TM's freeText sees it.
-function scan(s: string, lines: boolean, visit: (at: number, n: number, hidden: string) => boolean | void): void {
+// What scan reports for a VS16 that normalizeText removes without counting.
+const QUIET = "quiet";
+
+// scan judges each code point of s in turn and calls visit with its UTF-16 offset, its length and its class, "" if
+// kept; visit returns true to stop. Normalising, it judges as normalizeText does: a CR or CRLF is one kept LF (a next CR
+// reads as the LF it becomes: only U+20E3 matters there), and the first VS16 after a quiet base is QUIET and becomes
+// prev, so a second one is counted. Otherwise it judges as TM's freeText does: a CR is a control, and a VS16 after a
+// quiet base is hidden, as that base is no emoji base.
+function scan(s: string, normalizing: boolean, visit: (at: number, n: number, hidden: string) => boolean | void): void {
   let prev = -1;
   for (let i = 0; i < s.length; ) {
     let cp = s.codePointAt(i) ?? 0;
     let n = width(cp);
-    if (lines && cp === 0x0d) {
+    if (normalizing && cp === 0x0d) {
       cp = 0x0a;
       n = s.charCodeAt(i + 1) === 0x0a ? 2 : 1;
     }
-    const hidden = hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
-    if (hidden === "") {
+    const hidden =
+      normalizing && cp === VS16 && quietBase(prev) ? QUIET : hiddenAt(prev, cp, s.codePointAt(i + n) ?? -1);
+    if (hidden === "" || hidden === QUIET) {
       prev = cp;
     }
     if (visit(i, n, hidden) === true) {
@@ -209,16 +237,17 @@ export function normalizeText(s: string): { text: string; stripped: Count[] } {
   const counts = new Map<string, number>();
   let out = "";
   scan(raw, true, (at, n, hidden) => {
-    if (hidden !== "") {
-      bump(counts, hidden);
-    } else {
+    if (hidden === "") {
       out += raw.charCodeAt(at) === 0x0d ? "\n" : raw.slice(at, at + n);
+    } else if (hidden !== QUIET) {
+      bump(counts, hidden);
     }
   });
   return { text: trimSpace(out), stripped: ordered(HIDDEN_CLASSES, counts) };
 }
 
-// containsHidden reports whether s holds a character TM's freeText calls hidden (a CR is a control there).
+// containsHidden reports whether s holds a character TM's freeText calls hidden (a CR is a control there, and so is a
+// VS16 after a colour emoji).
 export function containsHidden(s: string): boolean {
   let found = false;
   scan(wellFormed(s), false, (_at, _n, hidden) => {
@@ -381,8 +410,11 @@ export function redact(s: string): { text: string; redactions: Count[] } {
   return { text: s, redactions: ordered(SECRET_KINDS, counts) };
 }
 
+const COUNTED = 1;
+const QUIETLY = 2;
+
 // mapNormalized is normalizeText's text for well-formed raw, with the raw range [from, to) of each of its code units,
-// and a mark on each raw code unit normalizeText removes.
+// and a mark on each raw code unit normalizeText removes: COUNTED, or QUIETLY for a VS16 it removes without counting.
 function mapNormalized(raw: string): { text: string; from: number[]; to: number[]; removed: Uint8Array } {
   let text = "";
   const from: number[] = [];
@@ -390,7 +422,7 @@ function mapNormalized(raw: string): { text: string; from: number[]; to: number[
   const removed = new Uint8Array(raw.length);
   scan(raw, true, (at, n, hidden) => {
     if (hidden !== "") {
-      removed.fill(1, at, at + n);
+      removed.fill(hidden === QUIET ? QUIETLY : COUNTED, at, at + n);
     } else if (raw.charCodeAt(at) === 0x0d) {
       text += "\n";
       from.push(at);
@@ -408,9 +440,10 @@ function mapNormalized(raw: string): { text: string; from: number[]; to: number[
 }
 
 // redactRaw replaces in raw itself the secrets redact finds in normalizeText(raw). A replaced range keeps the characters
-// normalizeText removed from it, after the token, where each is still removed (a VS16 after "]" is), so normalising
-// the result strips and counts the same characters and gives redact's text. A VS16 a secret took is not one of them:
-// it was kept, and goes with the secret.
+// normalizeText removed from it and counted, after the token, where each is still removed (a VS16 after "]" is), so
+// normalising the result strips and counts the same characters and gives redact's text. A VS16 a secret took is not
+// one of them: it was kept, and goes with the secret. Nor is a VS16 removed quietly after a colour emoji, which after
+// the token would be counted: it goes with the secret too, also the one after the secret's last character.
 export function redactRaw(raw: string): { text: string; redactions: Count[] } {
   raw = wellFormed(raw);
   const counts = new Map<string, number>();
@@ -424,10 +457,17 @@ export function redactRaw(raw: string): { text: string; redactions: Count[] } {
     let last = 0;
     for (const sp of spans) {
       const start = from[sp.start] ?? raw.length;
-      const end = to[sp.end - 1] ?? start;
+      let end = to[sp.end - 1] ?? start;
+      let next = end;
+      while (removed[next] === COUNTED) {
+        next++;
+      }
+      if (removed[next] === QUIETLY) {
+        end = next + 1;
+      }
       out += raw.slice(last, start) + REDACTED;
       for (let k = start; k < end; k++) {
-        out += removed[k] === 1 ? raw[k] : "";
+        out += removed[k] === COUNTED ? raw[k] : "";
       }
       last = end;
       bump(counts, sp.code);
