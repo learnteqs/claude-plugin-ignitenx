@@ -24,6 +24,7 @@ import {
   containsHidden,
   containsSecret,
   findQuote,
+  isPlainWord,
   normalizeText,
   redact,
   redactedTexts,
@@ -117,7 +118,7 @@ class Validator {
   constructor(
     private readonly opts: AgentOptions,
     private readonly fields: Fields,
-    private readonly secrets: string[],
+    private readonly secrets: PastedSecret[],
   ) {}
 
   fail(path: string, code: string): void {
@@ -314,29 +315,59 @@ class Validator {
       return true;
     }
     const text = this.secrets.length > 0 ? normalizeText(s).text : "";
-    return this.secrets.some((secret) => text.includes(secret));
+    return this.secrets.some((secret) => (secret.whole ? hasWord(text, secret.text) : text.includes(secret.text)));
   }
 }
 
+// A pasted secret, and whether it counts only as a whole word, as its forms without separators or punctuation do: so
+// "Pa55word" from "Password: ---- Pa55word" doesn't catch "xPa55word". A plain word such as "Pending" is not one.
+interface PastedSecret {
+  text: string;
+  whole: boolean;
+}
+
 // pastedSecrets is what the redaction of the normalised paste hides from TM, for a paste TM would take. Each is also
-// kept without the punctuation around it, which the model drops when it repeats a secret.
-function pastedSecrets(paste: string, maxChars: number): string[] {
+// kept without the separators before it and the punctuation around it, which the model drops when it repeats a secret.
+function pastedSecrets(paste: string, maxChars: number): PastedSecret[] {
   if (paste === "" || charCount(paste) > maxChars) {
     return [];
   }
   const sent = redact(paste).text;
-  const out = new Set<string>();
+  const out = new Map<string, boolean>();
+  const keep = (secret: string, whole: boolean) => {
+    if (charCount(secret) >= MIN_SECRET_CHARS && !sent.includes(secret)) {
+      out.set(secret, whole && (out.get(secret) ?? true));
+    }
+  };
   for (const text of redactedTexts(paste)) {
-    for (const secret of [text, text.replace(EDGE_PUNCTUATION, "")]) {
-      if (charCount(secret) >= MIN_SECRET_CHARS && !sent.includes(secret)) {
-        out.add(secret);
+    const bare = text.replace(LEADING_SEPARATORS, "");
+    keep(text, false);
+    for (const form of [bare, text.replace(EDGE_PUNCTUATION, ""), bare.replace(EDGE_PUNCTUATION, "")]) {
+      if (form !== text && !isPlainWord(form)) {
+        keep(form, true);
       }
     }
   }
-  return [...out];
+  return [...out].map(([text, whole]) => ({ text, whole }));
 }
 
-const EDGE_PUNCTUATION = /^["'`*_()[\]{}<>.,;:!?]+|["'`*_()[\]{}<>.,;:!?]+$/g;
+// hasWord reports whether word is in s with no ASCII letter or digit right before or after it.
+function hasWord(s: string, word: string): boolean {
+  for (let i = s.indexOf(word); i >= 0; i = s.indexOf(word, i + 1)) {
+    if (!ALNUM.test(s[i - 1] ?? "") && !ALNUM.test(s[i + word.length] ?? "")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const ALNUM = /^[0-9A-Za-z]$/;
+
+// Curly quotes and guillemets are built from char codes to keep this file ASCII.
+const EDGE = `"'\`*_()[\\]{}<>.,;:!?${String.fromCharCode(0x201c, 0x201d, 0x2018, 0x2019, 0xab, 0xbb)}`;
+const EDGE_PUNCTUATION = new RegExp(`^[${EDGE}]+|[${EDGE}]+$`, "gu");
+// Runs with no letter or digit before a value, as in "----> Summer2024!" or "- - Summer2024!".
+const LEADING_SEPARATORS = /^(?:[^\s0-9A-Za-z]+\s+)+/u;
 
 function languages(o: AgentOptions): string[] {
   return o.languages.map((l) => l.code);

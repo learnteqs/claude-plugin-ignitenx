@@ -574,6 +574,7 @@ describe("the pasted-secret rule of the plugin's own", () => {
   // Abc, is under 4 characters and is not looked for.
   const sourceText = `${SOURCE}\nTemp password: Xy7kLm92Qz\nDSN postgres://lms:Abc@db.acme.internal/lms`;
   const pasted = (set: Record<string, unknown>) => errorsOf({ sourceText, ...set });
+  const quoted = (open: number, close: number) => String.fromCharCode(open) + "Vq8rTn41Ws" + String.fromCharCode(close);
 
   test("a value equal to a secret that only its label showed is refused", () => {
     expect(containsSecret("Xy7kLm92Qz")).toBe(false);
@@ -611,10 +612,25 @@ describe("the pasted-secret rule of the plugin's own", () => {
   test.each<[string, string]>([
     ["a label with words before its colon", "Temp password for the admin: Vq8rTn41Ws"],
     ["a separator before the value", "Password: -> Vq8rTn41Ws"],
+    ["a long arrow before the value", "Password: ----> Vq8rTn41Ws"],
+    ["three separators before the value", "Password: - - - Vq8rTn41Ws"],
+    ["curly quotes around the value", `Temp password for the admin: ${quoted(0x201c, 0x201d)}`],
+    ["guillemets around the value", `Password (admin): ${quoted(0xab, 0xbb)}`],
   ])("a secret after %s is refused when repeated bare", (_, line) => {
     expect(errorsOf({ sourceText: `${SOURCE}\n${line}`, summary: "They sent Vq8rTn41Ws as the login." })).toEqual([
       { path: "summary", code: "secret_in_value" },
     ]);
+  });
+
+  test.each<[string, string, string]>([
+    [
+      "a word after a placeholder inside a longer word",
+      "Password: -------- sent separately by SMS",
+      "Chatbot left absent.",
+    ],
+    ["a plain word after a placeholder", "Password: ---- Pending", "Pending: the admin password."],
+  ])("%s is not a pasted secret", (_, line, summary) => {
+    expect(errorsOf({ sourceText: `${SOURCE}\n${line}`, summary })).toEqual([]);
   });
 
   test("a redacted run that the sent paste still shows elsewhere is not treated as hidden", () => {

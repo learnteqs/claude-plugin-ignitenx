@@ -23,7 +23,7 @@ import {
 
 // Byte copy of TM's spec/testdata/text-vectors.json; TM pins the same hash, so update both together.
 const VECTORS_URL = new URL("./fixtures/text-vectors.json", import.meta.url);
-const VECTORS_SHA256 = "sha256:79de92f54828a04ac096aa71fe40e928a4231a601ade2d66f4099ce21ac8ceb3";
+const VECTORS_SHA256 = "sha256:069452f1c4a5d3d524efbbfdeff93ad5a7abefec7c384ca22f0918b564de51cd";
 
 interface Vector {
   name: string;

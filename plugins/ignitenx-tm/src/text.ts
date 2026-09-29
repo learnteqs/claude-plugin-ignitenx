@@ -288,85 +288,275 @@ function pattern(re: RegExp, group = 0): Finder {
   };
 }
 
-const HS = "\\t \\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000";
-// A word can't start with ':', which would let "Password (admin) : X  Role : Y" read as one label ending at "Role :".
-const WORD = `[^:${WS}=][^${WS}=]{0,63}`;
 const COLON = `["']?[${WS}]*[:=]`;
 const KEYWORD =
   `(?:${ci("password|passwd|secret")}|${ci("api")}[_ -]?${ci("key")}|(${ci("token")}))(${ci("s")}|\\(${ci("s")}\\))?`;
 // A keyword right before its colon, as in "Password:" or "Tokens :"; pwd takes no words.
 const BARE_LABEL = new RegExp(`(?:${KEYWORD}|${ci("pwd")})${COLON}`, "gu");
-// The longest and the shortest words before a colon; a space after it keeps "https:" from ending one.
-const wordedLabel = (lazy: string) => {
-  const words = `(${WORD}${lazy})(?:[${HS}]+${WORD}${lazy}){0,3}${lazy}`;
-  return new RegExp(`${KEYWORD}[${HS}]+${words}${COLON}[${WS}]+`, "gu");
-};
-const WORDED_LABELS = [wordedLabel(""), wordedLabel("?")];
+const KEYWORD_AT = new RegExp(KEYWORD, "gu");
+// A label with words, as in "Password for the admin:", has up to 4 words of up to 64 code points.
+const MAX_WORDS = 4;
+const MAX_WORD_CODE_POINTS = 64;
+// A metering word starting a word after "token" is about usage, as in "Token budget/month: 50000".
 const METERING = new RegExp(
-  `^(?:${ci("budgets?|limits?|count|usage|used|costs?|quota|price|pricing|rates?|spend|consumption|allocation|cap")}|` +
-    `${ci("balance|remaining|utilisation|utilization|per|overage")})["']?:?$`,
+  `^[("'\\[]?(?:${ci("budget|limit|count|usage|used|cost|quota|price|pricing|rate|spend|consumption|allocation")}|` +
+    `${ci("allowance|allotment|credit|volume|pack|cap|balance|remaining|utilisation|utilization|per|overage")})` +
+    `${ci("s")}?(?:[^A-Za-z]|$)`,
   "u",
 );
 const NUMBER = new RegExp(
-  `^["'(\\[]?~?(?:\\u20b9|${ci("rs")}\\.?|${ci("inr")})?[0-9][0-9,.]*(?:${ci("k|m|lakh|crore")}|%)?` +
-    `(?:/-|\\+)?["')\\]}]*[,;]?$`,
+  `^["'(\\[]?~?(?:\\$|US\\$|\\u20ac|\\u00a3|\\u20b9|${ci("rs")}\\.?|${ci("inr|usd")})?` +
+    `[0-9][0-9,.]*(?:${ci("k|m|lakh|crore")}|%)?(?:[-/][0-9][0-9,.]*(?:${ci("k|m")})?)?` +
+    `(?:/-|\\+|/(?:${ci("month|mo|day|week|year|yr|annum|user|seat|learner")}))?["')\\]}]*[,;]?$`,
   "u",
 );
+// A plain word is prose, as in "Token budget: approved"; a token mixes case, digits or symbols.
+const PLAIN_WORD = /^(?:[A-Z]?[a-z]{1,12}(?:-[a-z]{1,12})?|[A-Z]{2,9})[).,;:!\]}]{0,2}$/u;
+
+export function isPlainWord(s: string): boolean {
+  return PLAIN_WORD.test(s);
+}
 const ADDRESS = "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:[.][A-Za-z0-9-]+)*[.][A-Za-z]{2,}";
 const EMAILS = new RegExp(`^(?:${ci("mailto")}:)?${ADDRESS}(?:[;,/]${ADDRESS})*[.,;)]?$`, "u");
-// What the labels ending at one place allow: after words an email address, after only "tokens" a number.
-type LabelEnd = { worded: boolean; tokensOnly: boolean; singular: boolean };
+// What labels ending at one place keep: an email after words, and a plain word after usage or inside brackets.
+type LabelEnd = { bare: boolean; worded: boolean; inner: boolean; usage: boolean; singular: boolean };
 
 // labelValues finds the value after each label such as "Password:", "Password for the admin:" or DB_PASSWORD=: the
 // next run of at least four non-space characters. A run that ends in a singular bare label is a blank field.
 function labelValues(s: string): [number, number][] {
   const labels = new Map<number, LabelEnd>();
-  const add = (m: RegExpExecArray, worded: boolean) => {
-    const end = m.index + m[0].length;
-    const l = labels.get(end) ?? { worded, tokensOnly: true, singular: false };
-    const tokensOnly = l.tokensOnly && m[1] !== undefined && m[2] !== undefined;
-    const singular = l.singular || (!worded && m[2] === undefined);
-    labels.set(end, { worded: worded || l.worded, tokensOnly, singular });
+  const add = (end: number, l: LabelEnd) => {
+    const seen = labels.get(end);
+    labels.set(
+      end,
+      seen
+        ? {
+            bare: l.bare || seen.bare,
+            worded: l.worded || seen.worded,
+            inner: l.inner && seen.inner,
+            usage: l.usage && seen.usage,
+            singular: l.singular || seen.singular,
+          }
+        : l,
+    );
   };
-  eachMatch(s, BARE_LABEL, (m) => add(m, false));
-  for (const re of WORDED_LABELS) {
-    eachMatch(s, re, (m) => {
-      if (m[1] === undefined || !METERING.test(m[3] ?? "")) {
-        add(m, true);
-      }
+  eachMatch(s, BARE_LABEL, (m) => {
+    const usage = m[1] !== undefined && m[2] !== undefined;
+    add(m.index + m[0].length, { bare: true, worded: false, inner: false, usage, singular: m[2] === undefined });
+  });
+  eachMatch(s, KEYWORD_AT, (m) => {
+    wordedEnds(s, m.index + m[0].length, m[1] !== undefined, (end, inner, metering) => {
+      const usage = m[1] !== undefined && (m[2] !== undefined || metering);
+      add(end, { bare: false, worded: true, inner, usage, singular: false });
     });
-  }
+  });
   const out: [number, number][] = [];
   let end = 0;
   for (const [labelEnd, label] of [...labels].sort((a, b) => a[0] - b[0])) {
-    const start = valueStart(s, labelEnd);
+    let start = valueStart(s, labelEnd);
+    const worded = label.worded && !label.bare;
+    let list = false;
+    if (worded) {
+      let word: [number, number] | null;
+      let blank: boolean;
+      [start, word, blank, list] = pastKeys(s, labelEnd, start, labels);
+      if (blank) {
+        continue;
+      }
+      if (word && charCount(s.slice(...word)) >= 4) {
+        out.push(word);
+      }
+    }
     // Linear for glued labels: values start in order, so one inside the previous run ends where it does, and any eight
     // code units hold at least four code points.
     end = start < end ? end : skip(s, start, false);
     const run = s.slice(start, end);
     const blank = labels.get(end)?.singular === true;
-    if (blank || (label.worded && EMAILS.test(unwrapped(run))) || (label.tokensOnly && NUMBER.test(run))) {
+    const prose = PLAIN_WORD.test(run);
+    const wordedKeeps = worded && (EMAILS.test(unwrapped(run)) || (label.inner && prose));
+    const kept = wordedKeeps || (label.usage && (NUMBER.test(run) || prose));
+    if (blank || kept) {
       continue;
     }
     const stop = valueEnd(s, start, end, labels);
     if (charCount(s.slice(start, Math.min(stop, start + 8))) >= 4) {
       out.push([start, stop]);
     }
+    if (list) {
+      listValues(s, stop, labels, out);
+    }
   }
   return out;
+}
+
+// wordedEnds passes each colon before whitespace in MAX_WORDS words: inside brackets, then the first outside, the end.
+function wordedEnds(s: string, i: number, token: boolean, found: Found): void {
+  const open = s.codePointAt(i);
+  if (open !== 0x28 && open !== 0x5b) {
+    const next = skipH(s, i);
+    if (next === i) {
+      return;
+    }
+    i = next;
+  }
+  let depth = 0;
+  let first = false;
+  for (let word = 0; word < MAX_WORDS; word++) {
+    const r0 = s.codePointAt(i) ?? 0;
+    if (i >= s.length || spaceCode(r0) || r0 === 0x3d || (r0 === 0x3a && depth === 0)) {
+      return;
+    }
+    let j = i;
+    let n = 0;
+    for (; j < s.length && n <= MAX_WORD_CODE_POINTS + 1; n++) {
+      const r = s.codePointAt(j) ?? 0;
+      const w = width(r);
+      if (spaceCode(r) || r === 0x3d) {
+        break;
+      }
+      if (r === 0x3a && j > i && startsSpace(s, j + w) && n <= MAX_WORD_CODE_POINTS) {
+        found(j + w, depth > 0, token && (first || METERING.test(s.slice(i, j))));
+        if (depth === 0) {
+          return;
+        }
+      }
+      if (r === 0x28 || r === 0x5b || r === 0x7b) {
+        depth++;
+      } else if (r === 0x29 || r === 0x5d || r === 0x7d) {
+        depth = Math.max(depth - 1, 0);
+      }
+      j += w;
+    }
+    if (n > MAX_WORD_CODE_POINTS) {
+      return;
+    }
+    const metering = token && METERING.test(s.slice(i, j));
+    first = first || (word === 0 && metering);
+    const k = skip(s, j, true);
+    if ((s[k] === ":" || s[k] === "=") && startsSpace(s, k + 1)) {
+      found(k + 1, depth > 0, first || metering);
+      if (depth === 0) {
+        return;
+      }
+    }
+    i = skipH(s, j);
+    if (i === j) {
+      return;
+    }
+  }
+}
+
+// pastKeys skips keys after a worded label, as "Temp:" in "Password (admin): Temp: X", and the word of a two-word key.
+function pastKeys(
+  s: string,
+  labelEnd: number,
+  start: number,
+  labels: Map<number, LabelEnd>,
+): [number, [number, number] | null, boolean, boolean] {
+  let word: [number, number] | null = null;
+  let list = false;
+  for (let n = 0; n < MAX_WORDS; n++) {
+    const stop = skip(s, start, false);
+    const next = skipH(s, stop);
+    const lineEnds = next >= s.length || lineBreak(s.charCodeAt(next));
+    if (stop === start) {
+      return [start, word, false, list];
+    }
+    if (isKeyRun(s, start, stop, labels)) {
+      // A key on a later line leaves the label blank; one that ends its line takes the next line's value.
+      for (let k = labelEnd; k < start; k++) {
+        if (lineBreak(s.charCodeAt(k))) {
+          return [start, word, true, list];
+        }
+      }
+      if (lineEnds) {
+        const after = skip(s, next, true);
+        if (after >= s.length) {
+          return [start, word, false, list];
+        }
+        return [after, word, isKeyRun(s, after, skip(s, after, false), labels), false];
+      }
+      [start, list] = [next, true];
+    } else if (
+      word === null &&
+      s.slice(stop, next) === " " &&
+      LETTERS.test(s.slice(start, stop)) &&
+      keyThenValue(s, next, labels)
+    ) {
+      [word, start] = [[start, stop], next];
+    } else {
+      return [start, word, false, list];
+    }
+  }
+  return [start, word, false, list];
+}
+
+// keyThenValue is a key at i with a value after it on its line that is not a plain word, as in "Key: k3yPrimary99".
+function keyThenValue(s: string, i: number, labels: Map<number, LabelEnd>): boolean {
+  const stop = skip(s, i, false);
+  const v = skipH(s, stop);
+  const end = skip(s, v, false);
+  return isKeyRun(s, i, stop, labels) && v > stop && end > v && !PLAIN_WORD.test(s.slice(v, end));
+}
+
+// listValues adds the values of the next keys on the line, as "trainer: Y" in "Passwords (LMS): admin: X trainer: Y".
+function listValues(s: string, i: number, labels: Map<number, LabelEnd>, out: [number, number][]): void {
+  for (let n = 0; n < MAX_WORDS; n++) {
+    const key = skipH(s, i);
+    const stop = skip(s, key, false);
+    const v = skipH(s, stop);
+    const end = skip(s, v, false);
+    if (!isKeyRun(s, key, stop, labels) || v === stop || end === v) {
+      return;
+    }
+    if (charCount(s.slice(v, Math.min(end, v + 8))) >= 4 && !PLAIN_WORD.test(s.slice(v, end))) {
+      out.push([v, end]);
+    }
+    i = end;
+  }
+}
+
+// isKeyRun is a run like "Temp:" or "(admin):" that names a field, and doesn't end a label of its own.
+function isKeyRun(s: string, start: number, stop: number, labels: Map<number, LabelEnd>): boolean {
+  return stop > start && s[stop - 1] === ":" && keyWord(s.slice(start, stop - 1)) && !labels.has(stop);
+}
+
+// keyWord is a field name: ASCII letters and "_./()-", with no digit or other symbol, as a password would have.
+function keyWord(w: string): boolean {
+  return /^[A-Za-z_./()-]+$/.test(w) && /[A-Za-z]/.test(w);
+}
+
+const LETTERS = /^[A-Za-z]+$/;
+
+type Found = (end: number, inner: boolean, metering: boolean) => void;
+
+function startsSpace(s: string, i: number): boolean {
+  return i < s.length && spaceCode(s.codePointAt(i) ?? 0);
+}
+
+function skipH(s: string, i: number): number {
+  while (i < s.length) {
+    const cp = s.codePointAt(i) ?? 0;
+    if (!spaceCode(cp) || lineBreak(cp)) {
+      break;
+    }
+    i += width(cp);
+  }
+  return i;
 }
 
 // eachMatch passes found the match at every start, so a label inside another's words is found too.
 function eachMatch(s: string, re: RegExp, found: (m: RegExpExecArray) => void): void {
   re.lastIndex = 0;
-  // Every label starts with an ASCII letter, so index + 1 is never inside a surrogate pair.
+  // Every keyword starts with a BMP character (ASCII or U+017F), so index + 1 is never inside a surrogate pair.
   for (let m = re.exec(s); m; m = re.exec(s)) {
     found(m);
     re.lastIndex = m.index + 1;
   }
 }
 
-const asciiAlnum = (cp: number) => (cp >= 0x30 && cp <= 0x39) || (cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a);
+const asciiAlnum = (cp: number) =>
+  (cp >= 0x30 && cp <= 0x39) || (cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a);
 const lineBreak = (cp: number) => cp === 0x0a || cp === 0x2028 || cp === 0x2029;
 
 function valueStart(s: string, i: number): number {
@@ -400,24 +590,41 @@ function separatorEnd(s: string, i: number): number {
   }
 }
 
+// valueEnd extends a quoted value to its closing quote, and a symbol-only value over the next runs up to a field.
 function valueEnd(s: string, start: number, end: number, labels: Map<number, LabelEnd>): number {
   end = Math.max(end, quoteEnd(s, start));
   for (let from = start; !/[0-9A-Za-z]/.test(s.slice(from, end)); ) {
-    let next = end;
-    while (next < s.length) {
-      const cp = s.codePointAt(next) ?? 0;
-      if (!spaceCode(cp) || lineBreak(cp)) {
-        break;
-      }
-      next += width(cp);
-    }
+    const next = skipH(s, end);
     const stop = skip(s, next, false);
-    if (stop === next || labels.get(stop)?.singular) {
+    // A mask is the whole value before a gap or a bracket, as in "Password : ********    Role : Admin".
+    const masked = isMask(s.slice(from, end)) && ([...s.slice(end, next)].length > 1 || s[next] === "(");
+    if (stop === next || labels.get(stop)?.singular || isKey(s, next, stop) || masked) {
       break;
     }
     [from, end] = [next, stop];
   }
   return end;
+}
+
+const MASK = new Set([0x2a, 0x2022, 0x25cf, 0x2217]);
+
+// isMask is a run of at least four mask characters, as in "Password: ********".
+function isMask(run: string): boolean {
+  const chars = [...run];
+  return chars.length >= 4 && chars.every((c) => MASK.has(c.codePointAt(0) ?? 0));
+}
+
+// isKey is a run that names the next field and has a value after it, as "Role:" or "Role" in "Role : Admin".
+function isKey(s: string, start: number, stop: number): boolean {
+  if (s[stop - 1] === ":") {
+    return keyWord(s.slice(start, stop - 1)) && hasRun(s, skipH(s, stop));
+  }
+  const k = skipH(s, stop);
+  return keyWord(s.slice(start, stop)) && (s[k] === ":" || s[k] === "=") && hasRun(s, skipH(s, k + 1));
+}
+
+function hasRun(s: string, i: number): boolean {
+  return i < s.length && !spaceCode(s.codePointAt(i) ?? 0);
 }
 
 const QUOTES = new Map([
@@ -507,7 +714,7 @@ function findSecrets(s: string): Span[] {
   const spans: Span[] = [];
   SECRET_PATTERNS.forEach((p, priority) => {
     for (const [start, end] of p.find(s)) {
-      if (s.slice(start, end) !== REDACTED) {
+      if (!isRedacted(s.slice(start, end))) {
         // A VS16 after a secret goes with it: after the token it would be a hidden character.
         spans.push({ start, end: s.charCodeAt(end) === VS16 ? end + 1 : end, priority, code: p.code });
       }
@@ -525,6 +732,22 @@ function findSecrets(s: string): Span[] {
   }
   return merged;
 }
+
+// isRedacted is REDACTED with at most closing punctuation after it, as in `"password": [redacted],`.
+function isRedacted(found: string): boolean {
+  if (!found.startsWith(REDACTED)) {
+    return false;
+  }
+  for (const c of found.slice(REDACTED.length)) {
+    if (!CLOSING.has(c.codePointAt(0) ?? 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// , . ; : ! ? ) ] } " ' and the closing curly quotes and guillemet.
+const CLOSING = new Set([0x2c, 0x2e, 0x3b, 0x3a, 0x21, 0x3f, 0x29, 0x5d, 0x7d, 0x22, 0x27, 0x201d, 0x2019, 0xbb]);
 
 export function containsSecret(s: string): boolean {
   return findSecrets(s).length > 0;

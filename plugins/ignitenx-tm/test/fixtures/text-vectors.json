@@ -1494,13 +1494,13 @@
     "freeText": true
   },
   {
-    "name": "a token budget is not a label",
+    "name": "a token budget keeps its count",
     "input": "Token budget: 50000",
     "normalised": "Token budget: 50000",
     "freeText": true
   },
   {
-    "name": "a token limit with more words is not a label",
+    "name": "a token limit with more words keeps its count",
     "input": "Token limit for the chatbot: 25000",
     "normalised": "Token limit for the chatbot: 25000",
     "freeText": true
@@ -1660,7 +1660,7 @@
     "freeText": true
   },
   {
-    "name": "a metering word with its colon is not a label",
+    "name": "a metering word keeps its count before another colon",
     "input": "Token budget: 50000 per month: approx",
     "normalised": "Token budget: 50000 per month: approx",
     "freeText": true
@@ -1699,9 +1699,9 @@
     "name": "a label with words and a note after the value",
     "input": "Password for admin: Welcome@123 (Note: case sensitive)",
     "normalised": "Password for admin: Welcome@123 (Note: case sensitive)",
-    "redacted": "Password for admin: [redacted] (Note: [redacted] sensitive)",
+    "redacted": "Password for admin: [redacted] (Note: case sensitive)",
     "redactions": {
-      "password_line": 2
+      "password_line": 1
     },
     "freeText": true
   },
@@ -1719,9 +1719,9 @@
     "name": "a colon inside the words before the label's colon",
     "input": "Password (note: case sensitive): Welcome@123",
     "normalised": "Password (note: case sensitive): Welcome@123",
-    "redacted": "Password (note: [redacted] sensitive): [redacted]",
+    "redacted": "Password (note: case sensitive): [redacted]",
     "redactions": {
-      "password_line": 2
+      "password_line": 1
     },
     "freeText": true
   },
@@ -1748,25 +1748,25 @@
     "freeText": true
   },
   {
-    "name": "tokens used is not a label",
+    "name": "tokens used keeps its count",
     "input": "Tokens used: 12,000",
     "normalised": "Tokens used: 12,000",
     "freeText": true
   },
   {
-    "name": "token budgets is not a label",
+    "name": "token budgets keeps its count",
     "input": "Token budgets for Q3: 50000",
     "normalised": "Token budgets for Q3: 50000",
     "freeText": true
   },
   {
-    "name": "more metering words after token are not labels",
+    "name": "more metering words after token keep their counts",
     "input": "Token used: 12000\nToken consumption: 45000\nToken allocation: 10000\nToken cap: 20000\nToken balance: 3,40,000",
     "normalised": "Token used: 12000\nToken consumption: 45000\nToken allocation: 10000\nToken cap: 20000\nToken balance: 3,40,000",
     "freeText": false
   },
   {
-    "name": "the rest of the metering words after token are not labels",
+    "name": "the rest of the metering words after token keep their counts",
     "input": "Token remaining: 45000\nToken utilisation: 1,25,000\nToken utilization: 125000\nToken per day: 20000\nToken overage: 2000",
     "normalised": "Token remaining: 45000\nToken utilisation: 1,25,000\nToken utilization: 125000\nToken per day: 20000\nToken overage: 2000",
     "freeText": false
@@ -1914,29 +1914,29 @@
     "freeText": true
   },
   {
-    "name": "symbols take the run of a plural label",
+    "name": "a symbol value stops before the next field's label",
     "input": "Password: ---- Tokens: abcd1234",
     "normalised": "Password: ---- Tokens: abcd1234",
-    "redacted": "Password: [redacted] [redacted]",
+    "redacted": "Password: [redacted] Tokens: [redacted]",
     "redactions": {
       "password_line": 2
     },
     "freeText": true
   },
   {
-    "name": "a quoted metering word is not a label",
+    "name": "a quoted metering word keeps its count",
     "input": "{\"token budget\": 50000}",
     "normalised": "{\"token budget\": 50000}",
     "freeText": true
   },
   {
-    "name": "a single-quoted metering word is not a label",
+    "name": "a single-quoted metering word keeps its count",
     "input": "{'token budget': 50000}",
     "normalised": "{'token budget': 50000}",
     "freeText": true
   },
   {
-    "name": "a quoted metering word before more keys is not a label",
+    "name": "a quoted metering word before more keys keeps its count",
     "input": "{\"token budget\": 50000, \"model\": \"gpt-4o\"}",
     "normalised": "{\"token budget\": 50000, \"model\": \"gpt-4o\"}",
     "freeText": true
@@ -2004,10 +2004,806 @@
     "freeText": true
   },
   {
-    "name": "the longest words stop before a colon that ends the text",
+    "name": "a key after a label with words is skipped, and a run ending the text is the value",
     "input": "Password for a: b: Summer2024!:",
     "normalised": "Password for a: b: Summer2024!:",
     "redacted": "Password for a: b: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a key after a label with words is skipped on its line",
+    "input": "Password (admin): Temp: Welcome@123 Expires: 24h",
+    "normalised": "Password (admin): Temp: Welcome@123 Expires: 24h",
+    "redacted": "Password (admin): Temp: [redacted] Expires: 24h",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a colon in brackets does not end a label with a field after the value",
+    "input": "Password (note: case-sensitive): Welcome@123  Expires: 24h",
+    "normalised": "Password (note: case-sensitive): Welcome@123  Expires: 24h",
+    "redacted": "Password (note: case-sensitive): [redacted]  Expires: 24h",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a label with words does not reach the next field",
+    "input": "Password (admin): Welcome@123  Role: Admin",
+    "normalised": "Password (admin): Welcome@123  Role: Admin",
+    "redacted": "Password (admin): [redacted]  Role: Admin",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "the field after a value keeps its own value",
+    "input": "Password for LMS: Welcome@123, Username: priya.sharma",
+    "normalised": "Password for LMS: Welcome@123, Username: priya.sharma",
+    "redacted": "Password for LMS: [redacted] Username: priya.sharma",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a key on the line after a label with words leaves it blank",
+    "input": "Details below (no password needed, we use SSO):\nCompany: Sundarbans Tea Company Ltd",
+    "normalised": "Details below (no password needed, we use SSO):\nCompany: Sundarbans Tea Company Ltd",
+    "freeText": false
+  },
+  {
+    "name": "a value on the line after a label with words is redacted",
+    "input": "Temp password for the admin:\nWelcome@123",
+    "normalised": "Temp password for the admin:\nWelcome@123",
+    "redacted": "Temp password for the admin:\n[redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a heading label, then fields on the next lines",
+    "input": "Password details:\nUsername: priya.n\nPassword: Welcome@123",
+    "normalised": "Password details:\nUsername: priya.n\nPassword: Welcome@123",
+    "redacted": "Password details:\nUsername: priya.n\nPassword: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a bare label ending the words keeps an email-shaped value secret",
+    "input": "Token for staging api_key: Ee1Can@ry.co",
+    "normalised": "Token for staging api_key: Ee1Can@ry.co",
+    "redacted": "Token for staging api_key: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a bare label ending the words takes a value that ends in a colon",
+    "input": "Password for staging DB_PASSWORD: Kk3Canary$: rotated",
+    "normalised": "Password for staging DB_PASSWORD: Kk3Canary$: rotated",
+    "redacted": "Password for staging DB_PASSWORD: [redacted] rotated",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a value glued to a plural label is not a key",
+    "input": "Password (admin): Qx7Canary!Passwords: x",
+    "normalised": "Password (admin): Qx7Canary!Passwords: x",
+    "redacted": "Password (admin): [redacted] x",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a qualifier glued to the keyword",
+    "input": "Password(admin): Welcome@123",
+    "normalised": "Password(admin): Welcome@123",
+    "redacted": "Password(admin): [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a qualifier in square brackets glued to the keyword",
+    "input": "API key[prod]: k3yStaging99",
+    "normalised": "API key[prod]: k3yStaging99",
+    "redacted": "API key[prod]: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a word glued to the keyword is not a label",
+    "input": "Tokenization(v2): enabled",
+    "normalised": "Tokenization(v2): enabled",
+    "freeText": true
+  },
+  {
+    "name": "a plural token count keeps its number",
+    "input": "Token(s): 50000",
+    "normalised": "Token(s): 50000",
+    "freeText": true
+  },
+  {
+    "name": "a per-month count after tokens is not a secret",
+    "input": "Tokens: 1M/month",
+    "normalised": "Tokens: 1M/month",
+    "freeText": true
+  },
+  {
+    "name": "a metering word with /month after it",
+    "input": "Token budget/month: 25000",
+    "normalised": "Token budget/month: 25000",
+    "freeText": true
+  },
+  {
+    "name": "a metering word later in the label",
+    "input": "Token (monthly) budget: 25000",
+    "normalised": "Token (monthly) budget: 25000",
+    "freeText": true
+  },
+  {
+    "name": "an allowance after token is a count",
+    "input": "Monthly token allowance: 2,00,000",
+    "normalised": "Monthly token allowance: 2,00,000",
+    "freeText": true
+  },
+  {
+    "name": "token usage is a count",
+    "input": "Token usage: 50000",
+    "normalised": "Token usage: 50000",
+    "freeText": true
+  },
+  {
+    "name": "a token quota is a count",
+    "input": "Token quota: 50000",
+    "normalised": "Token quota: 50000",
+    "freeText": true
+  },
+  {
+    "name": "a token count is a count",
+    "input": "Token count: 50000",
+    "normalised": "Token count: 50000",
+    "freeText": true
+  },
+  {
+    "name": "a plain word after a metering word is prose",
+    "input": "Token budget: approved",
+    "normalised": "Token budget: approved",
+    "freeText": true
+  },
+  {
+    "name": "a plain word after a later metering word is prose",
+    "input": "Token monthly pricing: Enterprise",
+    "normalised": "Token monthly pricing: Enterprise",
+    "freeText": true
+  },
+  {
+    "name": "a plain word after plural tokens is prose",
+    "input": "GenAI tokens: unlimited",
+    "normalised": "GenAI tokens: unlimited",
+    "freeText": true
+  },
+  {
+    "name": "a singular token takes a plain word",
+    "input": "Token: approved",
+    "normalised": "Token: approved",
+    "redacted": "Token: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain word after plural passwords is redacted",
+    "input": "Passwords: Sunshine",
+    "normalised": "Passwords: Sunshine",
+    "redacted": "Passwords: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a metering word keeps only counts and plain words",
+    "input": "Token used for the webhook: whk_9f8e7d6c5b",
+    "normalised": "Token used for the webhook: whk_9f8e7d6c5b",
+    "redacted": "Token used for the webhook: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a number after plural passwords is redacted",
+    "input": "Passwords: 20241234",
+    "normalised": "Passwords: 20241234",
+    "redacted": "Passwords: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a quoted number after plural API keys is redacted",
+    "input": "API_KEYS=\"73915284\"",
+    "normalised": "API_KEYS=\"73915284\"",
+    "redacted": "API_KEYS=[redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a metering word after password is still a label",
+    "input": "Password used: Welcome@123",
+    "normalised": "Password used: Welcome@123",
+    "redacted": "Password used: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a metering word after API key is still a label",
+    "input": "API key used for staging: k3yStaging99",
+    "normalised": "API key used for staging: k3yStaging99",
+    "redacted": "API key used for staging: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plural label takes the first word of prose",
+    "input": "Passwords: must be long.",
+    "normalised": "Passwords: must be long.",
+    "redacted": "Passwords: [redacted] be long.",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a quoted value with a space in JSON keeps the comma",
+    "input": "{\"username\": \"admin\", \"password\": \"Summer 2024!\", \"role\": \"admin\"}",
+    "normalised": "{\"username\": \"admin\", \"password\": \"Summer 2024!\", \"role\": \"admin\"}",
+    "redacted": "{\"username\": \"admin\", \"password\": [redacted], \"role\": \"admin\"}",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a quoted value in brackets counts once",
+    "input": "(Password: \"Summer 2024!\")",
+    "normalised": "(Password: \"Summer 2024!\")",
+    "redacted": "(Password: [redacted])",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a masked password is its own value",
+    "input": "Username : priya.n    Password : ********    Role : Admin",
+    "normalised": "Username : priya.n    Password : ********    Role : Admin",
+    "redacted": "Username : priya.n    Password : [redacted]    Role : Admin",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a dashed placeholder stops before the next field",
+    "input": "Password: ----  Industry: Manufacturing",
+    "normalised": "Password: ----  Industry: Manufacturing",
+    "redacted": "Password: [redacted]  Industry: Manufacturing",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "pwd is a label",
+    "input": "pwd: Summer2024!",
+    "normalised": "pwd: Summer2024!",
+    "redacted": "pwd: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "pwd glued to a name is a label",
+    "input": "DB pwd=Summer2024!",
+    "normalised": "DB pwd=Summer2024!",
+    "redacted": "DB pwd=[redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "passwd is a label",
+    "input": "passwd: Summer2024!",
+    "normalised": "passwd: Summer2024!",
+    "redacted": "passwd: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "api-key is a label",
+    "input": "api-key: k3yStaging99",
+    "normalised": "api-key: k3yStaging99",
+    "redacted": "api-key: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "an ASIA key is redacted",
+    "input": "id ASIAIOSFODNN7EXAMPLE",
+    "normalised": "id ASIAIOSFODNN7EXAMPLE",
+    "redacted": "id [redacted]",
+    "redactions": {
+      "aws_access_key": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a line break after token is not a label",
+    "input": "Token for\nthe record: approved",
+    "normalised": "Token for\nthe record: approved",
+    "freeText": false
+  },
+  {
+    "name": "a key at the end of its line takes the next line's value",
+    "input": "Password (admin): Temp:\nWelcome@123",
+    "normalised": "Password (admin): Temp:\nWelcome@123",
+    "redacted": "Password (admin): Temp:\n[redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a key at the end of its line before another key leaves the label blank",
+    "input": "Password (admin): Temp:  \nExpires: 24h",
+    "normalised": "Password (admin): Temp:  \nExpires: 24h",
+    "freeText": false
+  },
+  {
+    "name": "two keys after a label with words are both skipped",
+    "input": "Password (admin): Temp: Code: Welcome@123",
+    "normalised": "Password (admin): Temp: Code: Welcome@123",
+    "redacted": "Password (admin): Temp: Code: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a word before a key goes with it",
+    "input": "API key (prod): Primary Key: k3yPrimary99",
+    "normalised": "API key (prod): Primary Key: k3yPrimary99",
+    "redacted": "API key (prod): [redacted] Key: [redacted]",
+    "redactions": {
+      "password_line": 2
+    },
+    "freeText": true
+  },
+  {
+    "name": "a short word before a key is skipped",
+    "input": "Password (Trainer login): New PW: Train@123",
+    "normalised": "Password (Trainer login): New PW: Train@123",
+    "redacted": "Password (Trainer login): New PW: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain word before a separate field is the value",
+    "input": "Password (admin): Sunshine  Role: Admin",
+    "normalised": "Password (admin): Sunshine  Role: Admin",
+    "redacted": "Password (admin): [redacted]  Role: Admin",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a password ending in a colon is not a key",
+    "input": "Password for admin: Welcome@123: please change it after login",
+    "normalised": "Password for admin: Welcome@123: please change it after login",
+    "redacted": "Password for admin: [redacted] please change it after login",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a password before a spaced colon is not a field name",
+    "input": "Password: ---> Welcome@123 : change on first login",
+    "normalised": "Password: ---> Welcome@123 : change on first login",
+    "redacted": "Password: [redacted] : change on first login",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a password in brackets after a label with words",
+    "input": "Please use the temporary password (for admin: Welcome@123) and change it on first login.",
+    "normalised": "Please use the temporary password (for admin: Welcome@123) and change it on first login.",
+    "redacted": "Please use the temporary password (for admin: [redacted] and change it on first login.",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "two passwords in brackets",
+    "input": "Passwords (Trainer: Train@123, Admin: Admin@456)",
+    "normalised": "Passwords (Trainer: Train@123, Admin: Admin@456)",
+    "redacted": "Passwords (Trainer: [redacted] Admin: [redacted]",
+    "redactions": {
+      "password_line": 2
+    },
+    "freeText": true
+  },
+  {
+    "name": "a spaced colon inside brackets",
+    "input": "Password (LMS : admin): Welcome@123",
+    "normalised": "Password (LMS : admin): Welcome@123",
+    "redacted": "Password (LMS : admin): [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a spaced colon inside brackets before a plain word",
+    "input": "Password (see note : below)",
+    "normalised": "Password (see note : below)",
+    "freeText": true
+  },
+  {
+    "name": "braces in a label are counted like brackets",
+    "input": "Password for {env: prod} admin: Welcome@123",
+    "normalised": "Password for {env: prod} admin: Welcome@123",
+    "redacted": "Password for {env: prod} admin: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a stray closing bracket does not go below depth zero",
+    "input": "Password for b) admin: Welcome@123",
+    "normalised": "Password for b) admin: Welcome@123",
+    "redacted": "Password for b) admin: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a 65-character word before a spaced colon is too long",
+    "input": "Password aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : Summer2024!",
+    "normalised": "Password aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : Summer2024!",
+    "freeText": true
+  },
+  {
+    "name": "the colon after the words may start the next line",
+    "input": "Password for the admin\n: Welcome@123",
+    "normalised": "Password for the admin\n: Welcome@123",
+    "redacted": "Password for the admin\n: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a spaced colon needs whitespace after it",
+    "input": "The token for the demo :-) worked fine",
+    "normalised": "The token for the demo :-) worked fine",
+    "freeText": true
+  },
+  {
+    "name": "an equals sign inside a word is not part of a label",
+    "input": "Password reset for user_id=42: done",
+    "normalised": "Password reset for user_id=42: done",
+    "freeText": true
+  },
+  {
+    "name": "a short mask is a third separator",
+    "input": "Password: \u2022 \u2022 \u2022 Welcome@123",
+    "normalised": "Password: \u2022 \u2022 \u2022 Welcome@123",
+    "redacted": "Password: \u2022 \u2022 [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a single asterisk is a third separator",
+    "input": "Password: - - * Welcome@123",
+    "normalised": "Password: - - * Welcome@123",
+    "redacted": "Password: - - [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a run of mask characters is the whole value",
+    "input": "Password: ******** (unchanged)\nPassword: \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (unchanged)\nPassword: \u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf (unchanged)\nPassword: \u2217\u2217\u2217\u2217\u2217\u2217\u2217\u2217 (unchanged)",
+    "normalised": "Password: ******** (unchanged)\nPassword: \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (unchanged)\nPassword: \u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf (unchanged)\nPassword: \u2217\u2217\u2217\u2217\u2217\u2217\u2217\u2217 (unchanged)",
+    "redacted": "Password: [redacted] (unchanged)\nPassword: [redacted] (unchanged)\nPassword: [redacted] (unchanged)\nPassword: [redacted] (unchanged)",
+    "redactions": {
+      "password_line": 4
+    },
+    "freeText": false
+  },
+  {
+    "name": "a dashed placeholder stops before a spaced key",
+    "input": "Password: ---- Role = Admin\nPassword : ----    Role : Admin",
+    "normalised": "Password: ---- Role = Admin\nPassword : ----    Role : Admin",
+    "redacted": "Password: [redacted] Role = Admin\nPassword : [redacted]    Role : Admin",
+    "redactions": {
+      "password_line": 2
+    },
+    "freeText": false
+  },
+  {
+    "name": "a literal token with more than punctuation after it is redacted again",
+    "input": "Password: [redacted]\u2014\u092a\u093e\u0938\u0935\u0930\u094d\u0921\u0967\u0968\u0969",
+    "normalised": "Password: [redacted]\u2014\u092a\u093e\u0938\u0935\u0930\u094d\u0921\u0967\u0968\u0969",
+    "redacted": "Password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain word with punctuation after token usage is prose",
+    "input": "Token budget: approved.\nTokens: Unlimited!\nTokens: Monthly: 50000",
+    "normalised": "Token budget: approved.\nTokens: Unlimited!\nTokens: Monthly: 50000",
+    "freeText": false
+  },
+  {
+    "name": "a mixed-case run after tokens is redacted",
+    "input": "Tokens: AbCdEfGhIjKlMnOp",
+    "normalised": "Tokens: AbCdEfGhIjKlMnOp",
+    "redacted": "Tokens: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a metering word in the middle of the words is not usage",
+    "input": "Token for SMS Credits API: 73915284",
+    "normalised": "Token for SMS Credits API: 73915284",
+    "redacted": "Token for SMS Credits API: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a number after plural passwords with words is redacted",
+    "input": "Passwords for staff: 20241234",
+    "normalised": "Passwords for staff: 20241234",
+    "redacted": "Passwords for staff: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a password label ending in tokens is not token usage",
+    "input": "Password for the tokens page: 48291734",
+    "normalised": "Password for the tokens page: 48291734",
+    "redacted": "Password for the tokens page: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a run ending in a glued singular label is blank",
+    "input": "Secret: Password(x)token: Welcome@123",
+    "normalised": "Secret: Password(x)token: Welcome@123",
+    "redacted": "Secret: Password(x)token: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a bracketed metering word is a count",
+    "input": "Token (budget): 50000",
+    "normalised": "Token (budget): 50000",
+    "freeText": true
+  },
+  {
+    "name": "a metering word must end its word",
+    "input": "Token for Personio: 48291734",
+    "normalised": "Token for Personio: 48291734",
+    "redacted": "Token for Personio: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a metering word may have digits after it",
+    "input": "Token budget2025: 50000",
+    "normalised": "Token budget2025: 50000",
+    "freeText": true
+  },
+  {
+    "name": "a metering word with a full stop after it",
+    "input": "Token budget.: 25000",
+    "normalised": "Token budget.: 25000",
+    "freeText": true
+  },
+  {
+    "name": "a token after a metering word is still redacted",
+    "input": "Token budget: abcd1234",
+    "normalised": "Token budget: abcd1234",
+    "redacted": "Token budget: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "every metering word keeps a count",
+    "input": "Token price: 50000\nToken rate: 50000\nToken spend: 50000\nToken allotment: 50000\nToken credit: 50000\nToken volume: 50000\nToken pack: 50000",
+    "normalised": "Token price: 50000\nToken rate: 50000\nToken spend: 50000\nToken allotment: 50000\nToken credit: 50000\nToken volume: 50000\nToken pack: 50000",
+    "freeText": false
+  },
+  {
+    "name": "a count per period keeps its number",
+    "input": "Tokens: 500/mo\nTokens: 500/day\nTokens: 500/week\nTokens: 500/year\nTokens: 500/yr\nTokens: 500/annum\nTokens: 500/user\nTokens: 500/seat\nTokens: 500/learner\nTokens: 500/Month",
+    "normalised": "Tokens: 500/mo\nTokens: 500/day\nTokens: 500/week\nTokens: 500/year\nTokens: 500/yr\nTokens: 500/annum\nTokens: 500/user\nTokens: 500/seat\nTokens: 500/learner\nTokens: 500/Month",
+    "freeText": false
+  },
+  {
+    "name": "a budget in dollars per month after token usage",
+    "input": "GenAI token budget: $500/month",
+    "normalised": "GenAI token budget: $500/month",
+    "freeText": true
+  },
+  {
+    "name": "a fraction after token usage",
+    "input": "Token usage: 12,000/50,000",
+    "normalised": "Token usage: 12,000/50,000",
+    "freeText": true
+  },
+  {
+    "name": "a price per million after token usage",
+    "input": "Token pricing: $0.50/1M",
+    "normalised": "Token pricing: $0.50/1M",
+    "freeText": true
+  },
+  {
+    "name": "an amount in euros after token usage",
+    "input": "Token budget: \u20ac400",
+    "normalised": "Token budget: \u20ac400",
+    "freeText": true
+  },
+  {
+    "name": "a range after token usage",
+    "input": "Token budget: 10-20k",
+    "normalised": "Token budget: 10-20k",
+    "freeText": true
+  },
+  {
+    "name": "a password after a short mask",
+    "input": "Password: **** Welcome@123",
+    "normalised": "Password: **** Welcome@123",
+    "redacted": "Password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain word before a separate field",
+    "input": "Password login: Disabled  SSO: Azure AD",
+    "normalised": "Password login: Disabled  SSO: Azure AD",
+    "redacted": "Password login: [redacted]  SSO: Azure AD",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "the next keys after a skipped key are a list",
+    "input": "Passwords (LMS): admin: Welcome@123 trainer: Trainer@456",
+    "normalised": "Passwords (LMS): admin: Welcome@123 trainer: Trainer@456",
+    "redacted": "Passwords (LMS): admin: [redacted] trainer: [redacted]",
+    "redactions": {
+      "password_line": 2
+    },
+    "freeText": true
+  },
+  {
+    "name": "a plain word in a list stays",
+    "input": "Password (admin): Temp: Welcome@123 Role: Admin",
+    "normalised": "Password (admin): Temp: Welcome@123 Role: Admin",
+    "redacted": "Password (admin): Temp: [redacted] Role: Admin",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a key-shaped word at the end of the line is a value",
+    "input": "Password: ----> Sunshine:",
+    "normalised": "Password: ----> Sunshine:",
+    "redacted": "Password: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": false
+  },
+  {
+    "name": "a long lowercase run after tokens is a token",
+    "input": "Webhook tokens: whkabcdefghijkl",
+    "normalised": "Webhook tokens: whkabcdefghijkl",
+    "redacted": "Webhook tokens: [redacted]",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "an all-caps word after tokens is prose",
+    "input": "GenAI tokens: UNLIMITED",
+    "normalised": "GenAI tokens: UNLIMITED",
+    "freeText": true
+  },
+  {
+    "name": "the plural label in main's prose line",
+    "input": "Passwords: must be long. Tokenization: on. Secretary: Priya",
+    "normalised": "Passwords: must be long. Tokenization: on. Secretary: Priya",
+    "redacted": "Passwords: [redacted] be long. Tokenization: on. Secretary: Priya",
+    "redactions": {
+      "password_line": 1
+    },
+    "freeText": true
+  },
+  {
+    "name": "a number after a metering word after password is redacted",
+    "input": "Password limit: 20241234",
+    "normalised": "Password limit: 20241234",
+    "redacted": "Password limit: [redacted]",
     "redactions": {
       "password_line": 1
     },
