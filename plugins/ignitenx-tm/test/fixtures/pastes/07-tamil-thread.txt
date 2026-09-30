@@ -1,12 +1,12 @@
-From: செல்வி ராஜன் <selvi.rajan@agaram.edu.in>
-To: onboarding@learnteq.com
+From: செல்வி ராஜன் <selvi.rajan@agaram.example>
+To: onboarding@learnteq.example
 Date: Tue, 29 Sep 2026 11:10 +0530
 Subject: புதிய LMS கோரிக்கை - அகரம் கல்வி நிறுவனம்
 
 வணக்கம்,
 
 அகரம் கல்வி நிறுவனம் சார்பாக, Repute மூலம் புதிய LMS அமைத்துத் தரவும்.
-நிர்வாகி: செல்வி ராஜன், பயனர்பெயர் selvi.rajan, selvi.rajan@agaram.edu.in
+நிர்வாகி: செல்வி ராஜன், பயனர்பெயர் selvi.rajan, selvi.rajan@agaram.example
 மொழிகள்: தமிழ் மற்றும் ஆங்கிலம்; இயல்பு மொழி தமிழ்.
 Standard plan வேண்டும். எங்கள் அலுவலகம் மதுரையில் உள்ளது.
 

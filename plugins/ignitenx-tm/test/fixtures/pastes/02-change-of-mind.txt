@@ -1,5 +1,5 @@
-From: Daniel Joseph <daniel.joseph@harborview.co.in>
-To: onboarding@learnteq.com
+From: Daniel Joseph <daniel.joseph@harborview.example>
+To: onboarding@learnteq.example
 Date: Thu, 24 Sep 2026 17:20 +0530
 Subject: Re: Re: LMS for Harborview Hotels
 
@@ -11,11 +11,11 @@ Everything else as below.
 
 Daniel
 
-On Wed, 23 Sep 2026 at 11:02, Daniel Joseph <daniel.joseph@harborview.co.in> wrote:
+On Wed, 23 Sep 2026 at 11:02, Daniel Joseph <daniel.joseph@harborview.example> wrote:
 > Hello,
 >
 > We'd like a new LMS for Harborview Hotels, via Repute.
-> Admin: Daniel Joseph, username daniel.j, daniel.joseph@harborview.co.in
+> Admin: Daniel Joseph, username daniel.j, daniel.joseph@harborview.example
 > Standard plan, English only. We're in Kochi.
 >
 > Thanks,

@@ -195,10 +195,10 @@ const CASES: Case[] = [
         "fields.title": stated("Brightpath Academy", "Brightpath Academy"),
         "fields.partnerId": stated("P-102", "through Repute"),
         "fields.adminUserName": stated("meera.iyer", "username meera.iyer"),
-        "fields.adminEmail": stated("meera.iyer@brightpath.edu.in", "meera.iyer@brightpath.edu.in"),
+        "fields.adminEmail": stated("meera.iyer@brightpath.example", "meera.iyer@brightpath.example"),
         "fields.statedRequesterEmail": stated(
-          "meera.iyer@brightpath.edu.in",
-          "From: Meera Iyer <meera.iyer@brightpath.edu.in>",
+          "meera.iyer@brightpath.example",
+          "From: Meera Iyer <meera.iyer@brightpath.example>",
         ),
         "fields.defaultLang": stated("en", "English only for now"),
         "fields.enabledLanguages": stated(["en"], "English only for now"),
@@ -217,7 +217,7 @@ const CASES: Case[] = [
         name: "the meeting recording link in a field",
         change: set(
           "fields.pageTitle",
-          stated("https://learnteq.zoom.us/rec/share/Xy12AbCd", "The recording is here"),
+          stated("https://zoom.example/rec/share/Xy12AbCd", "The recording is here"),
         ),
         refused: [{ path: "fields.pageTitle.value", code: "free_text" }],
       },
@@ -232,7 +232,7 @@ const CASES: Case[] = [
         "fields.title": stated("Harborview Hotels", "Harborview Hotels"),
         "fields.partnerId": stated("P-102", "via Repute"),
         "fields.adminUserName": stated("daniel.j", "username daniel.j"),
-        "fields.adminEmail": stated("daniel.joseph@harborview.co.in", "daniel.joseph@harborview.co.in"),
+        "fields.adminEmail": stated("daniel.joseph@harborview.example", "daniel.joseph@harborview.example"),
         "fields.defaultLang": stated("en", "English stays the default"),
         "fields.enabledLanguages": stated(["en", "ta"], "we need Tamil as well as English", "English only"),
         "fields.timeZone": derived("Asia/Kolkata", "We're in Kochi"),
@@ -260,10 +260,10 @@ const CASES: Case[] = [
         "fields.title": stated("Northwind Logistics", "Northwind Logistics"),
         "fields.partnerId": stated("P-102", "under Repute"),
         "fields.adminUserName": stated("kavya.s", "Admin user kavya.s"),
-        "fields.adminEmail": stated("kavya.s@northwindlogistics.in", "email kavya.s@northwindlogistics.in"),
+        "fields.adminEmail": stated("kavya.s@northwindlogistics.example", "email kavya.s@northwindlogistics.example"),
         "fields.statedRequesterEmail": stated(
-          "kavya.s@northwindlogistics.in",
-          "From: Kavya S <kavya.s@northwindlogistics.in>",
+          "kavya.s@northwindlogistics.example",
+          "From: Kavya S <kavya.s@northwindlogistics.example>",
         ),
         "fields.defaultLang": stated("en", "Standard plan, English."),
         "fields.enabledLanguages": stated(["en"], "Standard plan, English."),
@@ -308,7 +308,7 @@ const CASES: Case[] = [
         "fields.title": stated("Contoso Training", "Contoso Training"),
         "fields.partnerId": stated("P-102", "partner: Repute"),
         "fields.adminUserName": stated("anita.d", "username anita.d"),
-        "fields.adminEmail": stated("anita.desai@contosotraining.in", "anita.desai@contosotraining.in"),
+        "fields.adminEmail": stated("anita.desai@contosotraining.example", "anita.desai@contosotraining.example"),
         "fields.defaultLang": stated("en", "English as the default"),
         "fields.enabledLanguages": stated(["en", "hi"], "English and Hindi"),
         "fields.timeZone": derived("Asia/Kolkata", "We're in Mumbai"),
@@ -322,7 +322,7 @@ const CASES: Case[] = [
         name: "a URL in a field",
         change: set(
           "fields.requestedEnvironment",
-          stated("UAT https://uat.contosotraining.in", "Our UAT portal is at https://uat.contosotraining.in"),
+          stated("UAT https://uat.contosotraining.example", "Our UAT portal is at https://uat.contosotraining.example"),
         ),
         refused: [{ path: "fields.requestedEnvironment.value", code: "free_text" }],
       },
@@ -394,7 +394,7 @@ const CASES: Case[] = [
         "fields.title": stated("அகரம் கல்வி நிறுவனம்", "அகரம் கல்வி நிறுவனம்"),
         "fields.partnerId": stated("P-102", "Repute மூலம்"),
         "fields.adminUserName": stated("selvi.rajan", "பயனர்பெயர் selvi.rajan"),
-        "fields.adminEmail": stated("selvi.rajan@agaram.edu.in", "selvi.rajan@agaram.edu.in"),
+        "fields.adminEmail": stated("selvi.rajan@agaram.example", "selvi.rajan@agaram.example"),
         "fields.defaultLang": stated("ta", "இயல்பு மொழி தமிழ்"),
         "fields.enabledLanguages": stated(["ta", "en"], "மொழிகள்: தமிழ் மற்றும் ஆங்கிலம்"),
         "fields.timeZone": derived("Asia/Kolkata", "எங்கள் அலுவலகம் மதுரையில் உள்ளது"),
@@ -458,7 +458,7 @@ const CASES: Case[] = [
           "Admin password: Zenith@2026!",
           "Zenith@2026!",
         ),
-        "fields.adminEmail": stated("farah.khan@zenithpharma.co.in", "farah.khan@zenithpharma.co.in"),
+        "fields.adminEmail": stated("farah.khan@zenithpharma.example", "farah.khan@zenithpharma.example"),
         "fields.defaultLang": stated("en", "Standard plan, English."),
         "fields.enabledLanguages": stated(["en"], "Standard plan, English."),
         "fields.timeZone": derived("Asia/Kolkata", "We are in Hyderabad"),
@@ -543,7 +543,7 @@ const CASES: Case[] = [
         "fields.title": stated("Coastal Care Hospitals", "Coastal\u200b Care\u200d Hospitals"),
         "fields.partnerId": stated("P-102", "via Repute"),
         "fields.adminUserName": stated("leela.nair", "username leela.nair"),
-        "fields.adminEmail": stated("leela.nair@coastalcare.in", "leela.nair@coastalcare.in"),
+        "fields.adminEmail": stated("leela.nair@coastalcare.example", "leela.nair@coastalcare.example"),
         "fields.defaultLang": stated("en", "Standard plan, English."),
         "fields.enabledLanguages": stated(["en"], "Standard plan, English."),
         "fields.timeZone": derived("Asia/Kolkata", "We are in Kochi"),
@@ -594,12 +594,12 @@ const CASES: Case[] = [
         "fields.partnerId": stated("P-102", "through Repute"),
         "fields.adminUserName": stated("sunita.rao", "username sunita.rao"),
         "fields.adminEmail": stated(
-          "sunita.rao@xn--crestlne-yhh.edu.in",
-          "email sunita.rao@xn--crestlne-yhh.edu.in",
+          "sunita.rao@xn--crestlne-yhh.example",
+          "email sunita.rao@xn--crestlne-yhh.example",
         ),
         "fields.statedRequesterEmail": stated(
-          "rahul.verma@crestline.edu.in",
-          "From: Rahul Verma <rahul.verma@crestline.edu.in>",
+          "rahul.verma@crestline.example",
+          "From: Rahul Verma <rahul.verma@crestline.example>",
         ),
         "fields.defaultLang": stated("en", "Standard plan, English."),
         "fields.enabledLanguages": stated(["en"], "Standard plan, English."),
@@ -614,19 +614,19 @@ const CASES: Case[] = [
     hostile: [
       {
         name: "the admin email with a hidden character",
-        change: set("fields.adminEmail.value", "sunita.rao@crest\u200bline.edu.in"),
+        change: set("fields.adminEmail.value", "sunita.rao@crest\u200bline.example"),
         refused: [{ path: "fields.adminEmail.value", code: "invalid_format" }],
       },
       {
         name: "the lookalike domain as a link in the title",
-        change: set("fields.title.value", "Crestline https://xn--crestlne-yhh.edu.in"),
+        change: set("fields.title.value", "Crestline https://xn--crestlne-yhh.example"),
         refused: [{ path: "fields.title.value", code: "free_text" }],
       },
     ],
     sent: (body) => {
-      expect(body.fields.adminEmail.value).toBe("sunita.rao@xn--crestlne-yhh.edu.in");
+      expect(body.fields.adminEmail.value).toBe("sunita.rao@xn--crestlne-yhh.example");
       expect(body.flags.map((f: { code: string }) => f.code)).toEqual(["lookalike_domain", "admin_domain_mismatch"]);
-      expect(body.sourceText).toContain("sunita.rao@crestl\u0456ne.edu.in");
+      expect(body.sourceText).toContain("sunita.rao@crestl\u0456ne.example");
     },
   },
 ];

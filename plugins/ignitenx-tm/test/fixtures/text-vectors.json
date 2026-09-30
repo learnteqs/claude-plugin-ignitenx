@@ -179,9 +179,9 @@
   },
   {
     "name": "Azure account key",
-    "input": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=core.windows.net",
-    "normalised": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=core.windows.net",
-    "redacted": "AccountName=acme;AccountKey=[redacted];EndpointSuffix=core.windows.net",
+    "input": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=storage.example",
+    "normalised": "AccountName=acme;AccountKey=abc123+/xyz==;EndpointSuffix=storage.example",
+    "redacted": "AccountName=acme;AccountKey=[redacted];EndpointSuffix=storage.example",
     "redactions": {
       "azure_account_key": 1
     },
@@ -189,9 +189,9 @@
   },
   {
     "name": "SAS signature",
-    "input": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
-    "normalised": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
-    "redacted": "https://acme.blob.core.windows.net/c?sv=2022-11-02&sig=[redacted]",
+    "input": "https://acme.blob.storage.example/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
+    "normalised": "https://acme.blob.storage.example/c?sv=2022-11-02&sig=abcdefghijklmnop1234%3D",
+    "redacted": "https://acme.blob.storage.example/c?sv=2022-11-02&sig=[redacted]",
     "redactions": {
       "azure_sas": 1
     },
@@ -762,8 +762,8 @@
   },
   {
     "name": "a company name that is a domain is free text",
-    "input": "Naukri.com",
-    "normalised": "Naukri.com",
+    "input": "jobs.example",
+    "normalised": "jobs.example",
     "freeText": true
   },
   {
@@ -780,8 +780,8 @@
   },
   {
     "name": "a link with no scheme is not free text",
-    "input": "Acme zoom.us/j/8123",
-    "normalised": "Acme zoom.us/j/8123",
+    "input": "Acme zoom.example/j/8123",
+    "normalised": "Acme zoom.example/j/8123",
     "freeText": false
   },
   {
@@ -1187,9 +1187,9 @@
   },
   {
     "name": "an email address before the colon",
-    "input": "Password for priya.n@acmelearning.in: Welcome@123",
-    "normalised": "Password for priya.n@acmelearning.in: Welcome@123",
-    "redacted": "Password for priya.n@acmelearning.in: [redacted]",
+    "input": "Password for priya.n@acmelearning.example: Welcome@123",
+    "normalised": "Password for priya.n@acmelearning.example: Welcome@123",
+    "redacted": "Password for priya.n@acmelearning.example: [redacted]",
     "redactions": {
       "password_line": 1
     },
@@ -1523,14 +1523,14 @@
   },
   {
     "name": "an email address after a label with words stays",
-    "input": "send the password to: priya@acme.in",
-    "normalised": "send the password to: priya@acme.in",
+    "input": "send the password to: priya@acme.example",
+    "normalised": "send the password to: priya@acme.example",
     "freeText": true
   },
   {
     "name": "an email address right after a label is redacted",
-    "input": "Password: priya@acme.in",
-    "normalised": "Password: priya@acme.in",
+    "input": "Password: priya@acme.example",
+    "normalised": "Password: priya@acme.example",
     "redacted": "Password: [redacted]",
     "redactions": {
       "password_line": 1
@@ -1655,8 +1655,8 @@
   },
   {
     "name": "an email address and a full stop after a label with words stay",
-    "input": "Password to be sent to: hr.ops@wipro.com.",
-    "normalised": "Password to be sent to: hr.ops@wipro.com.",
+    "input": "Password to be sent to: hr.ops@corp.example.",
+    "normalised": "Password to be sent to: hr.ops@corp.example.",
     "freeText": true
   },
   {
@@ -1833,44 +1833,44 @@
   },
   {
     "name": "an email address in angle brackets after a label with words stays",
-    "input": "Send the password to: <priya.sharma@acmelearning.in>",
-    "normalised": "Send the password to: <priya.sharma@acmelearning.in>",
+    "input": "Send the password to: <priya.sharma@acmelearning.example>",
+    "normalised": "Send the password to: <priya.sharma@acmelearning.example>",
     "freeText": false
   },
   {
     "name": "email addresses joined by ; after a label with words stay",
-    "input": "Send the password to: priya.sharma@acmelearning.in;ravi.k@acmelearning.in",
-    "normalised": "Send the password to: priya.sharma@acmelearning.in;ravi.k@acmelearning.in",
+    "input": "Send the password to: priya.sharma@acmelearning.example;ravi.k@acmelearning.example",
+    "normalised": "Send the password to: priya.sharma@acmelearning.example;ravi.k@acmelearning.example",
     "freeText": true
   },
   {
     "name": "an email address in brackets after a label with words stays",
-    "input": "Send the password to: (priya@acme.in)",
-    "normalised": "Send the password to: (priya@acme.in)",
+    "input": "Send the password to: (priya@acme.example)",
+    "normalised": "Send the password to: (priya@acme.example)",
     "freeText": true
   },
   {
     "name": "an email address in quotes after a label with words stays",
-    "input": "Send the password to: 'priya@acme.in'",
-    "normalised": "Send the password to: 'priya@acme.in'",
+    "input": "Send the password to: 'priya@acme.example'",
+    "normalised": "Send the password to: 'priya@acme.example'",
     "freeText": true
   },
   {
     "name": "a mailto: address after a label with words stays",
-    "input": "Send the password to: Mailto:priya@acme.in",
-    "normalised": "Send the password to: Mailto:priya@acme.in",
+    "input": "Send the password to: Mailto:priya@acme.example",
+    "normalised": "Send the password to: Mailto:priya@acme.example",
     "freeText": false
   },
   {
     "name": "email addresses joined by / and , after a label with words stay",
-    "input": "Send the password to: priya@acme.in/ravi@acme.in,hr@acme.in",
-    "normalised": "Send the password to: priya@acme.in/ravi@acme.in,hr@acme.in",
+    "input": "Send the password to: priya@acme.example/ravi@acme.example,hr@acme.example",
+    "normalised": "Send the password to: priya@acme.example/ravi@acme.example,hr@acme.example",
     "freeText": false
   },
   {
     "name": "a list with a part that is not an address is redacted",
-    "input": "Send the password to: priya@acme.in;Welcome@123",
-    "normalised": "Send the password to: priya@acme.in;Welcome@123",
+    "input": "Send the password to: priya@acme.example;Welcome@123",
+    "normalised": "Send the password to: priya@acme.example;Welcome@123",
     "redacted": "Send the password to: [redacted]",
     "redactions": {
       "password_line": 1
@@ -1879,8 +1879,8 @@
   },
   {
     "name": "an email address in angle brackets right after a label is redacted",
-    "input": "Password: <priya@acme.in>",
-    "normalised": "Password: <priya@acme.in>",
+    "input": "Password: <priya@acme.example>",
+    "normalised": "Password: <priya@acme.example>",
     "redacted": "Password: [redacted]",
     "redactions": {
       "password_line": 1
@@ -2081,8 +2081,8 @@
   },
   {
     "name": "a bare label ending the words keeps an email-shaped value secret",
-    "input": "Token for staging api_key: Ee1Can@ry.co",
-    "normalised": "Token for staging api_key: Ee1Can@ry.co",
+    "input": "Token for staging api_key: Ee1Can@ry.example",
+    "normalised": "Token for staging api_key: Ee1Can@ry.example",
     "redacted": "Token for staging api_key: [redacted]",
     "redactions": {
       "password_line": 1

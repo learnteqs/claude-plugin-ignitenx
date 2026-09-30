@@ -1,5 +1,5 @@
 From: L&D Weekly <newsletter@ldweekly.example>
-To: onboarding@learnteq.com
+To: onboarding@learnteq.example
 Date: Wed, 23 Sep 2026 07:00 +0000
 Subject: L&D Weekly #142: Microlearning, AI tutors and the new LMS buyers' guide
 

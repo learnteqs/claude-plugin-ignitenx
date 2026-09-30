@@ -9,7 +9,7 @@ import { Submitter } from "../src/submit.js";
 
 // Byte copy of TM's spec/testdata/contract/request-v1.json; TM pins the same hash, so update both together.
 const CONTRACT_URL = new URL("./fixtures/request-v1.json", import.meta.url);
-const CONTRACT_SHA256 = "sha256:cadafce20a3f564aacc2a151cda811ac66f85893d5869423bfaac013c3ccfb5b";
+const CONTRACT_SHA256 = "sha256:28e65cfe6e72cd4b8f2c4779b3e96ada0de2d9bbc393ab2f5455c1091d3a0420";
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 const raw = readFileSync(CONTRACT_URL);

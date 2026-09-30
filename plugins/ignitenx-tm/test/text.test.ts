@@ -23,7 +23,7 @@ import {
 
 // Byte copy of TM's spec/testdata/text-vectors.json; TM pins the same hash, so update both together.
 const VECTORS_URL = new URL("./fixtures/text-vectors.json", import.meta.url);
-const VECTORS_SHA256 = "sha256:069452f1c4a5d3d524efbbfdeff93ad5a7abefec7c384ca22f0918b564de51cd";
+const VECTORS_SHA256 = "sha256:70037d89691a73f086f610997622d691ffb546465ba359f4b37b3874fc4ebbf1";
 
 interface Vector {
   name: string;
@@ -231,7 +231,7 @@ describe("containsSecret and redact", () => {
     expect(containsSecret(s)).toBe(true);
   });
 
-  test.each(["Acme Learning Pvt Ltd", "priya.n@acmelearning.in", "RC-4471", "password reset flow", REDACTED])(
+  test.each(["Acme Learning Pvt Ltd", "priya.n@acmelearning.example", "RC-4471", "password reset flow", REDACTED])(
     "%j is not a secret",
     (s) => {
       expect(containsSecret(s)).toBe(false);
@@ -493,7 +493,7 @@ describe("findQuote", () => {
 describe("isFreeText and textCode", () => {
   test.each([
     ["Johnson & Johnson", ""],
-    ["Naukri.com", ""],
+    ["Jobs.example", ""],
     ["Acme Pvt. Ltd/India", ""],
     ["Hotel: Grand Profile: Acme", ""],
     ["வணக்கம் \u2764\ufe0f", ""],
@@ -502,10 +502,10 @@ describe("isFreeText and textCode", () => {
     ["", "length"],
     ["Acme\tLearning", "free_text"],
     [" Acme", "free_text"],
-    ["WWW.acme.in", "free_text"],
+    ["WWW.acme.example", "free_text"],
     ["Acme `x`", "free_text"],
     ["Acme <b>", "free_text"],
-    ["Acme zoom.us/j/8123", "free_text"],
+    ["Acme zoom.example/j/8123", "free_text"],
     ["Acme tel:+911234", "free_text"],
     ["Acme //10.0.0.1/x", "free_text"],
     ["Acme gopher://10.0.0.1", "free_text"],

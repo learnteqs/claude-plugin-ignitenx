@@ -1,5 +1,5 @@
-From: Suresh Pillai <suresh.pillai@evergreenagro.in>
-To: Arjun Rao <arjun.rao@learnteq.com>
+From: Suresh Pillai <suresh.pillai@evergreenagro.example>
+To: Arjun Rao <arjun.rao@learnteq.example>
 Date: Sat, 26 Sep 2026 09:40 +0530
 Subject: Re: LMS options for Evergreen Agro
 
@@ -12,7 +12,7 @@ The AI chatbot sounds interesting, maybe later, we'll think about it.
 
 Suresh
 
-On Fri, 25 Sep 2026 at 18:12, Arjun Rao <arjun.rao@learnteq.com> wrote:
+On Fri, 25 Sep 2026 at 18:12, Arjun Rao <arjun.rao@learnteq.example> wrote:
 > Hi Suresh,
 >
 > As discussed, an LMS for Evergreen Agro would go through Repute. Standard or Pro, both include English and Tamil.
