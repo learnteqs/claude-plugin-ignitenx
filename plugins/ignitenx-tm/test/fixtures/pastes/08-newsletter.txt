@@ -1,0 +1,15 @@
+From: L&D Weekly <newsletter@ldweekly.example>
+To: onboarding@learnteq.com
+Date: Wed, 23 Sep 2026 07:00 +0000
+Subject: L&D Weekly #142: Microlearning, AI tutors and the new LMS buyers' guide
+
+This week in L&D
+
+1. Microlearning that sticks: five patterns from teams who ship a course a week.
+2. AI tutors in the classroom: what 200 trainers told us.
+3. The 2026 LMS buyers' guide: set up a new LMS for your organisation in a week, with a checklist for admins,
+   partners and plans.
+
+Read the full issue: https://ldweekly.example/issues/142
+
+You are receiving this because you subscribed at ldweekly.example. Unsubscribe: https://ldweekly.example/u/9f3c

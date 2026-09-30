@@ -5,7 +5,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { IdentityError, TMClient, checkIdentity, loadConfig } from "../src/identity.js";
+import { ALLOWED_PERMISSIONS, IdentityError, TMError, checkIdentity, loadConfig } from "../src/identity.js";
+import { TMClient } from "../src/tm-client.js";
 import { TEST_KEY, TEST_KEY_ID, TEST_TOKEN, meFor, startFakeTM, type FakeTM } from "./fake-tm.js";
 
 const expectCode = async (promise: Promise<unknown>, code: string) => {
@@ -97,6 +98,93 @@ describe("checkIdentity", () => {
   test("refuses a key with no permissions at all", () => {
     expect(() => checkIdentity(meFor([]), TEST_KEY_ID, "")).toThrowError("no permissions");
   });
+
+  test("allows exactly the agent's permissions, and reports refusals as TMErrors", () => {
+    expect([...ALLOWED_PERMISSIONS].sort()).toEqual([
+      "ops.view",
+      "partners.view",
+      "plans.view",
+      "provisioning.submit",
+      "provisioning.view",
+    ]);
+    const err = (() => {
+      try {
+        checkIdentity(meFor(["db.view"]), TEST_KEY_ID, "");
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect(err).toBeInstanceOf(IdentityError);
+    expect(err).toBeInstanceOf(TMError);
+    expect(err).toMatchObject({ code: "refused", fieldErrors: [] });
+  });
+
+  test("names at most ten well-formed permissions in a refusal, sorted, and only counts the rest", () => {
+    const refusal = (permissions: string[]) => {
+      try {
+        checkIdentity(meFor(permissions), TEST_KEY_ID, "");
+      } catch (e) {
+        return (e as IdentityError).message;
+      }
+      return "";
+    };
+    const prefix = "the agent key holds access an agent must not have: ";
+    expect(refusal(["plans.view", "tenants.delete", "db.view"])).toBe(`${prefix}db.view, tenants.delete`);
+    const longest = `a.${"b".repeat(38)}`;
+    expect(
+      refusal(["plans.view", "db.view", "password=hunter22xyz", "Tenants.Delete", "a.b\n", `${longest}b`, longest]),
+    ).toBe(`${prefix}${longest}, db.view and 4 unrecognised permissions`);
+    expect(refusal(["password=hunter22xyz"])).toBe(`${prefix}1 unrecognised permission`);
+    expect(refusal(["view", ".view", "db..view", "db.view.", "1db.view", "db.v\u200Biew"])).toBe(
+      `${prefix}6 unrecognised permissions`,
+    );
+    const many = Array.from({ length: 12 }, (_, i) => `extra${String(i).padStart(2, "0")}.view`);
+    expect(refusal([...many].reverse())).toBe(`${prefix}${many.slice(0, 10).join(", ")} and 2 more`);
+  });
+
+  test("cleans the key name and keeps at most 100 code points of it", () => {
+    const keyName = (name: unknown) =>
+      checkIdentity({ ...(meFor(["plans.view"]) as object), name }, TEST_KEY_ID, "").keyName;
+    expect(keyName("key:provisioning\u0000-agent\u200B\u202E\r\n\u2028")).toBe("provisioning-agent");
+    expect(keyName(`key:${"n".repeat(150)}`)).toBe("n".repeat(100));
+    expect(keyName("\u{1F600}".repeat(150))).toBe("\u{1F600}".repeat(100));
+    expect(keyName(7)).toBe("");
+  });
+
+  test("returns at most 50 grants but checks the permissions of every grant", () => {
+    const me = meFor(["plans.view"]) as { access: { grants: unknown[] } };
+    me.access.grants = Array.from({ length: 60 }, () => ({ permissions: ["plans.view"], scope: { allTenants: true } }));
+    expect(checkIdentity(me, TEST_KEY_ID, "").grants).toHaveLength(50);
+    me.access.grants.push({ permissions: ["tenants.delete"], scope: { allTenants: true } });
+    expect(() => checkIdentity(me, TEST_KEY_ID, "")).toThrowError("tenants.delete");
+  });
+
+  test("keeps at most 200 scope entries, each 1 to 100 printable code points", () => {
+    const me = meFor(["plans.view"]) as { access: { grants: unknown[] } };
+    const tamil = "\u0BA4".repeat(100);
+    const tenants = [
+      "acme",
+      "",
+      7,
+      null,
+      "bad\u0000",
+      "zero\u200Bwidth",
+      "line\nbreak",
+      "t".repeat(101),
+      tamil,
+      "t".repeat(100),
+      ...Array.from({ length: 250 }, (_, i) => `tenant-${i}`),
+    ];
+    me.access.grants = [
+      { permissions: ["plans.view"], scope: { allTenants: false, tenants, partners: ["P-1", "P-2\u2028", 3] } },
+    ];
+    const scope = checkIdentity(me, TEST_KEY_ID, "").grants[0]?.scope;
+    expect(scope?.allTenants).toBe(false);
+    expect(scope?.tenants).toHaveLength(200);
+    expect(scope?.tenants.slice(0, 4)).toEqual(["acme", tamil, "t".repeat(100), "tenant-0"]);
+    expect(scope?.tenants.at(-1)).toBe("tenant-196");
+    expect(scope?.partners).toEqual(["P-1"]);
+  });
 });
 
 describe("TMClient", () => {
@@ -185,10 +273,13 @@ describe("TMClient", () => {
   test("maps Tenant Manager refusals to codes without echoing secrets", async () => {
     tm.exchangeStatus = 401;
     const rejected = await expectCode(client().identity(), "rejected");
-    expect(rejected.message).toContain('HTTP 401 "invalid agent key"');
+    expect(rejected.message).toContain("HTTP 401");
+    expect(rejected.message).not.toContain("invalid agent key");
+    expect(rejected.retryAfterSeconds).toBeUndefined();
     tm.exchangeStatus = 429;
     const limited = await expectCode(client().identity(), "rate_limited");
     expect(limited.message).toContain("retry after 7s");
+    expect(limited.retryAfterSeconds).toBe(7);
     tm.exchangeStatus = 503;
     await expectCode(client().identity(), "unavailable");
     tm.exchangeStatus = 200;

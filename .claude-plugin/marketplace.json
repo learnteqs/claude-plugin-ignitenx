@@ -27,8 +27,8 @@
     {
       "name": "ignitenx-tm",
       "source": "./plugins/ignitenx-tm",
-      "description": "Tenant-provisioning agent for igniteNX Tenant Manager. Talks to Tenant Manager only through its bundled tpa-mcp tools, with every other tool denied. For the agent runner only.",
-      "version": "0.1.0",
+      "description": "Tenant-provisioning agent for igniteNX Tenant Manager. Records a pasted tenant request in Tenant Manager as a shadow request; nothing is provisioned. Talks to Tenant Manager only through its bundled tpa-mcp tools, with every other tool denied. For the agent's own folder or runner only.",
+      "version": "0.2.0",
       "author": {
         "name": "Learnteq Solutions"
       },

@@ -1,10 +1,12 @@
-// Talks to Tenant Manager as a scoped agent key and checks the key holds nothing beyond the agent's allowed access.
-// Neither the key nor the token it is exchanged for may ever appear in a returned value, an error message or a log.
+// The agent key's configuration and identity check, the errors every Tenant Manager call reports, and what counts as
+// printable text from TM. The key may hold nothing beyond the agent's allowed access; neither the key nor its token may
+// appear in a value, a message or a log.
 import { readFileSync } from "node:fs";
 
 export const KEY_PATTERN = /^tmk_([0-9a-f]{16})_[A-Za-z0-9_-]{43}$/;
 
-// The only permissions the agent may hold. provisioning.* and ops.view are planned but not yet defined in TM.
+// The only permissions the agent may hold. provisioning.view and provisioning.submit exist in TM; ops.view is planned
+// but not yet defined.
 export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
   "plans.view",
   "partners.view",
@@ -13,17 +15,66 @@ export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
   "ops.view",
 ]);
 
-const REQUEST_TIMEOUT_MS = 15_000;
-const TOKEN_REFRESH_MARGIN_MS = 60_000;
+const PERMISSION_NAME = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
+const PERMISSION_NAME_MAX = 40;
+const PERMISSIONS_NAMED = 10;
+const KEY_NAME_MAX = 100;
+const GRANTS_MAX = 50;
+const SCOPE_ENTRIES_MAX = 200;
+const SCOPE_ENTRY_MAX = 100;
+// Control, format, private-use, unassigned, surrogate and line or paragraph separator characters.
+const UNPRINTABLE = /[\p{C}\p{Zl}\p{Zp}]/gu;
+
+export interface FieldError {
+  path: string;
+  code: string;
+}
 
 export type IdentityErrorCode = "config" | "rejected" | "rate_limited" | "no_access" | "unavailable" | "refused";
 
-export class IdentityError extends Error {
+export type TMErrorCode =
+  | IdentityErrorCode
+  | "invalid_spec"
+  | "conflict"
+  | "too_large"
+  | "daily_cap"
+  | "retry_later"
+  | "bad_request"
+  | "ambiguous";
+
+export interface TMErrorDetail {
+  status?: number;
+  tmCode?: string;
+  fieldErrors?: FieldError[];
+  retryAfterSeconds?: number;
+}
+
+// TMError is defined here rather than in tm-client.ts, which re-exports it, so that this file imports nothing back.
+export class TMError extends Error {
+  readonly status?: number;
+  readonly tmCode?: string;
+  readonly fieldErrors: FieldError[];
+  readonly retryAfterSeconds?: number;
+
   constructor(
-    readonly code: IdentityErrorCode,
+    readonly code: TMErrorCode,
     message: string,
+    detail: TMErrorDetail = {},
   ) {
     super(message);
+    this.name = "TMError";
+    this.status = detail.status;
+    this.tmCode = detail.tmCode;
+    this.fieldErrors = detail.fieldErrors ?? [];
+    this.retryAfterSeconds = detail.retryAfterSeconds;
+  }
+}
+
+export class IdentityError extends TMError {
+  declare readonly code: IdentityErrorCode;
+
+  constructor(code: IdentityErrorCode, message: string, detail: TMErrorDetail = {}) {
+    super(code, message, detail);
     this.name = "IdentityError";
   }
 }
@@ -90,87 +141,31 @@ function readKey(env: NodeJS.ProcessEnv): string {
   }
 }
 
-type Fetch = typeof fetch;
-
-export class TMClient {
-  private token?: { value: string; expiresAt: number };
-
-  constructor(
-    private readonly config: TMConfig,
-    private readonly fetchImpl: Fetch = fetch,
-    private readonly now: () => number = Date.now,
-  ) {}
-
-  async identity(): Promise<Identity> {
-    const me = await this.getJSON("api/tenantmanagements/me");
-    return checkIdentity(me, this.config.keyId, new Date(this.token?.expiresAt ?? this.now()).toISOString());
-  }
-
-  private async getJSON(path: string): Promise<unknown> {
-    for (let attempt = 0; ; attempt++) {
-      const res = await this.send(path, { headers: { Authorization: `Bearer ${await this.accessToken()}` } });
-      if (res.status === 401 && attempt === 0) {
-        this.token = undefined;
-        continue;
-      }
-      if (!res.ok) {
-        throw await statusError(res, "Tenant Manager refused the request");
-      }
-      return res.json();
-    }
-  }
-
-  private async accessToken(): Promise<string> {
-    if (this.token && this.now() < this.token.expiresAt - TOKEN_REFRESH_MARGIN_MS) {
-      return this.token.value;
-    }
-    const res = await this.send("api/tm/auth/agent-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: this.config.key }),
-    });
-    if (!res.ok) {
-      throw await statusError(res, "Tenant Manager did not issue a token for the agent key");
-    }
-    const body = (await res.json()) as { access_token?: unknown; expires_in?: unknown };
-    if (typeof body.access_token !== "string" || typeof body.expires_in !== "number") {
-      throw new IdentityError("unavailable", "Tenant Manager returned an unexpected token response");
-    }
-    this.token = { value: body.access_token, expiresAt: this.now() + body.expires_in * 1000 };
-    return this.token.value;
-  }
-
-  private async send(path: string, init: RequestInit): Promise<Response> {
-    try {
-      return await this.fetchImpl(new URL(path, this.config.baseUrl), {
-        ...init,
-        redirect: "error",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-    } catch {
-      throw new IdentityError("unavailable", `could not reach Tenant Manager at ${this.config.baseUrl.origin}`);
-    }
-  }
+// printable returns the value when it is 1 to max code points with nothing unprintable in it.
+export function printable(value: unknown, max: number): string | undefined {
+  return typeof value === "string" && value !== "" && value.search(UNPRINTABLE) < 0 && [...value].length <= max
+    ? value
+    : undefined;
 }
 
-// statusError names the likely cause and quotes TM's own reason. TM answers errors with short fixed strings, never
-// secrets; the quote is still trimmed to printable ASCII and capped, since it reaches the model.
-async function statusError(res: Response, context: string): Promise<IdentityError> {
-  const reason = (await res.text().catch(() => "")).replace(/[^\x20-\x7e]+/g, " ").trim().slice(0, 100);
-  const said = `HTTP ${res.status}${reason ? ` "${reason}"` : ""}`;
-  switch (res.status) {
-    case 401:
-      return new IdentityError("rejected", `${context} (${said}): the key is invalid, expired, revoked or not allowed from this address`);
-    case 403:
-      return new IdentityError("no_access", `${context} (${said}): the key has no effective access, or TM is not set up for agents`);
-    case 429: {
-      const retry = Number(res.headers.get("Retry-After"));
-      const wait = Number.isInteger(retry) && retry > 0 ? `; retry after ${retry}s` : "";
-      return new IdentityError("rate_limited", `${context} (${said}): rate limited${wait}`);
+// printables keeps up to maxItems printable strings of at most maxChars code points, dropping any other item.
+export function printables(value: unknown, maxItems: number, maxChars: number): string[] {
+  const out: string[] = [];
+  for (const raw of Array.isArray(value) ? value : []) {
+    const v = printable(raw, maxChars);
+    if (v !== undefined) {
+      out.push(v);
+      if (out.length === maxItems) {
+        break;
+      }
     }
-    default:
-      return new IdentityError("unavailable", `${context} (${said})`);
   }
+  return out;
+}
+
+// sanitise strips what is unprintable and keeps at most max code points.
+export function sanitise(value: string, max: number): string {
+  return [...value.replace(UNPRINTABLE, "")].slice(0, max).join("");
 }
 
 function strings(value: unknown): string[] {
@@ -179,11 +174,28 @@ function strings(value: unknown): string[] {
 
 function scope(value: unknown): Scope {
   const s = (value ?? {}) as Record<string, unknown>;
-  return { allTenants: s.allTenants === true, tenants: strings(s.tenants), partners: strings(s.partners) };
+  return {
+    allTenants: s.allTenants === true,
+    tenants: printables(s.tenants, SCOPE_ENTRIES_MAX, SCOPE_ENTRY_MAX),
+    partners: printables(s.partners, SCOPE_ENTRIES_MAX, SCOPE_ENTRY_MAX),
+  };
+}
+
+// named lists a few well-formed permission names and only counts the rest, so /me cannot put its text in a message.
+function named(permissions: string[]): string {
+  const wellFormed = permissions.filter((p) => p.length <= PERMISSION_NAME_MAX && PERMISSION_NAME.test(p)).sort();
+  const shown = wellFormed.slice(0, PERMISSIONS_NAMED);
+  const more = wellFormed.length - shown.length;
+  const bad = permissions.length - wellFormed.length;
+  const parts = [
+    ...(more > 0 ? [`${more} more`] : []),
+    ...(bad > 0 ? [`${bad} unrecognised permission${bad === 1 ? "" : "s"}`] : []),
+  ];
+  return [shown.join(", "), ...parts].filter(Boolean).join(" and ");
 }
 
 // checkIdentity refuses a /me response that is not this key, is a super admin, or holds any permission outside the
-// allowed set - in the union or in any single grant.
+// allowed set - in the union or in any single grant, including grants beyond those it returns.
 export function checkIdentity(me: unknown, keyId: string, tokenExpiresAt: string): Identity {
   const body = (me ?? {}) as Record<string, unknown>;
   const expected = `key:${keyId}`;
@@ -194,25 +206,20 @@ export function checkIdentity(me: unknown, keyId: string, tokenExpiresAt: string
   if (access.superAdmin !== false) {
     throw new IdentityError("refused", "the agent key reports super-admin access, which an agent must never have");
   }
-  const grants = Array.isArray(access.grants)
-    ? access.grants.map((g) => {
-        const grant = (g ?? {}) as Record<string, unknown>;
-        return { permissions: strings(grant.permissions), scope: scope(grant.scope) };
-      })
-    : [];
-  const held = new Set([...strings(access.permissions), ...grants.flatMap((g) => g.permissions)]);
+  const grants = (Array.isArray(access.grants) ? access.grants : []).map((g) => (g ?? {}) as Record<string, unknown>);
+  const held = new Set([...strings(access.permissions), ...grants.flatMap((g) => strings(g.permissions))]);
   if (held.size === 0) {
     throw new IdentityError("no_access", "the agent key holds no permissions");
   }
-  const extra = [...held].filter((p) => !ALLOWED_PERMISSIONS.has(p)).sort();
+  const extra = [...held].filter((p) => !ALLOWED_PERMISSIONS.has(p));
   if (extra.length > 0) {
-    throw new IdentityError("refused", `the agent key holds access an agent must not have: ${extra.join(", ")}`);
+    throw new IdentityError("refused", `the agent key holds access an agent must not have: ${named(extra)}`);
   }
   return {
     keyId,
-    keyName: typeof body.name === "string" ? body.name.replace(/^key:/, "") : "",
+    keyName: typeof body.name === "string" ? sanitise(body.name.replace(/^key:/, ""), KEY_NAME_MAX) : "",
     permissions: [...held].sort(),
-    grants,
+    grants: grants.slice(0, GRANTS_MAX).map((g) => ({ permissions: strings(g.permissions), scope: scope(g.scope) })),
     tokenExpiresAt,
   };
 }

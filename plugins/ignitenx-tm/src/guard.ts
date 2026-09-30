@@ -1,8 +1,9 @@
 // PreToolUse hook: denies every tool except this plugin's own tpa_* tools, including built-in tools, other plugins' tools
 // and claude.ai connectors. Anything it cannot parse is denied too.
+import { TOOL_NAMES, qualified } from "./tool-names.js";
 
 // Exact names, not a pattern: a server someone else names plugin_ignitenx-tm_tpa-mcp would otherwise pass for this one.
-export const ALLOWED_TOOLS: ReadonlySet<string> = new Set(["mcp__plugin_ignitenx-tm_tpa-mcp__tpa_get_identity"]);
+export const ALLOWED_TOOLS: ReadonlySet<string> = new Set(TOOL_NAMES.map(qualified));
 
 export interface Decision {
   allow: boolean;

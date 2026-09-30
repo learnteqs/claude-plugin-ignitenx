@@ -1,0 +1,51 @@
+{
+  "clientRequestId": "01JB2Q7Z3K8M9N0P1Q2R3S4T5V",
+  "schemaVersion": 1,
+  "clientOptionsVersion": "sha256:3f5c1c0e1b8a4c2d9e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d",
+  "client": { "name": "tpa-mcp", "version": "0.2.0" },
+  "sourceText": "From: Priya N <priya.n@acmelearning.in>\nTo: onboarding@learnteq.com\nSubject: Re: LMS set-up for Acme Learning\n\nHi team, following yesterday's demo we'd like to go ahead. Please set up a new LMS for Acme Learning Pvt Ltd (via Repute, company id RC-4471).\nAdmin is Priya N, username priya.n, priya.n@acmelearning.in.\nWe need English and Tamil, with English as the default. Our Chennai office runs it.\nStandard plan please. Functional managers approve trainings.\n\nThanks,\nPriya\n\n> On Tue, Rahul wrote:\n> Maybe the chatbot later, we'll think about it.",
+  "summary": "New tenant for Acme Learning under Repute, English and Tamil.",
+  "triage": { "isTenantRequest": true, "confidence": 0.95, "stage": "request_ready" },
+  "fields": {
+    "tenantKey": { "value": "acme-learning", "source": "derived", "confidence": 0.6, "evidence": ["Acme Learning Pvt Ltd"] },
+    "title": { "value": "Acme Learning Pvt Ltd", "source": "stated", "confidence": 0.95, "evidence": ["Acme Learning Pvt Ltd"] },
+    "pageTitle": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+    "idpDisplayName": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+    "industry": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+    "partnerId": { "value": "P-102", "source": "stated", "confidence": 0.95, "evidence": ["via Repute"] },
+    "companyId": { "value": "RC-4471", "source": "stated", "confidence": 0.95, "evidence": ["company id RC-4471"] },
+    "adminUserName": { "value": "priya.n", "source": "stated", "confidence": 0.95, "evidence": ["username priya.n"] },
+    "adminEmail": { "value": "priya.n@acmelearning.in", "source": "stated", "confidence": 0.95, "evidence": ["Admin is Priya N, username priya.n, priya.n@acmelearning.in"] },
+    "statedRequesterEmail": { "value": "priya.n@acmelearning.in", "source": "stated", "confidence": 0.9, "evidence": ["From: Priya N <priya.n@acmelearning.in>"] },
+    "defaultLang": { "value": "en", "source": "stated", "confidence": 0.9, "evidence": ["with English as the default"] },
+    "enabledLanguages": { "value": ["en", "ta"], "source": "stated", "confidence": 0.9, "evidence": ["We need English and Tamil"] },
+    "timeZone": { "value": "Asia/Kolkata", "source": "derived", "confidence": 0.8, "evidence": ["Our Chennai office"] },
+    "theme": { "value": "default", "source": "default", "confidence": 1, "evidence": [] },
+    "themeMode": { "value": "light", "source": "default", "confidence": 1, "evidence": [] },
+    "requestedEnvironment": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+    "requestedRegion": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+    "options": {
+      "functionalManager": { "value": true, "source": "stated", "confidence": 0.9, "evidence": ["Functional managers approve trainings"] },
+      "groups": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+      "genAI": {
+        "chatbot": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+        "aitutor": { "value": null, "source": "absent", "confidence": 0, "evidence": [] },
+        "postAssessment": { "value": null, "source": "absent", "confidence": 0, "evidence": [] }
+      }
+    },
+    "subscription": {
+      "planId": { "value": "plan-std", "source": "stated", "confidence": 0.95, "evidence": ["Standard plan"] },
+      "status": { "value": "active", "source": "default", "confidence": 1, "evidence": [] },
+      "preferredProvider": { "value": "openai", "source": "default", "confidence": 1, "evidence": [] },
+      "monthlyBudget": { "value": null, "source": "absent", "confidence": 0, "evidence": [] }
+    },
+    "placement": {
+      "postgresServerId": { "value": "local-pg", "source": "chosen", "confidence": 0.95, "evidence": [] },
+      "mongoServerId": { "value": "local-mongo", "source": "chosen", "confidence": 0.95, "evidence": [] },
+      "blobAccountId": { "value": "blob-1", "source": "chosen", "confidence": 0.95, "evidence": [] }
+    }
+  },
+  "flags": [
+    { "code": "not_yet_confirmed", "field": "fields.options.genAI.chatbot", "note": "The chatbot was only discussed for later." }
+  ]
+}

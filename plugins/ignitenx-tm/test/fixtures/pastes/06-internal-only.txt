@@ -1,0 +1,14 @@
+From: Vikram Shah <vikram.shah@learnteq.com>
+To: Arjun Rao <arjun.rao@learnteq.com>, Rahul Menon <rahul.menon@learnteq.com>
+Date: Mon, 28 Sep 2026 16:55 +0530
+Subject: Acme Foods?
+
+Guys, I think Acme Foods might want an LMS soon, they asked about pricing at the expo. Probably Pro plan and I'd
+assume they come through Repute like the others.
+
+Should we set something up in advance so it's ready when they sign?
+
+Vikram
+
+On Mon, 28 Sep 2026 at 16:40, Rahul Menon <rahul.menon@learnteq.com> wrote:
+> Let's not create anything until they actually ask. I'll ping their HR head this week.
