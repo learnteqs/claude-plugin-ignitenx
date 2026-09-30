@@ -145,10 +145,13 @@ export const SubmitInputSchema = z.strictObject({
   fields: z
     .strictObject({
       tenantKey: Text.describe(
-        "Also the tenant URL name: one lower-case word of a-z and 0-9. Not stated: from the company name, drop legal " +
-          "words (Pvt, Private, Ltd, Limited, LLP, LLC, Inc, Corp, Co, Company, The), join the rest up to 20 " +
-          "letters (Lotus Learning Academy Pvt Ltd: lotuslearningacademy), and end with uat for a UAT tenant (the " +
-          "options environment or the text says UAT: lotuslearningacademyuat); source derived, confidence about 0.6",
+        "Also the tenant URL name. Stated: exactly as written (TM takes 3-52 of a-z, 0-9 and single hyphens), never " +
+          "adding uat. Not stated: one lower-case word of a-z and 0-9 from the company name. Drop legal words (Pvt, " +
+          "Private, Ltd, Limited, LLP, LLC, Inc, Corp, Co, Company, The), then join whole words, never cutting one, " +
+          "while the total stays within 20 characters, keeping at least the first (Lotus Learning Academy Pvt Ltd: " +
+          "lotuslearningacademy; Sri Venkateswara Educational Trust: srivenkateswara). End it with uat only for a " +
+          "UAT tenant: the options environment is UAT, or it has no name and requestedEnvironment is UAT " +
+          "(lotuslearningacademyuat). Source derived, confidence about 0.6",
       ),
       title: Text.describe("The company display name as written, at most 100"),
       pageTitle: Text.describe("At most 100"),

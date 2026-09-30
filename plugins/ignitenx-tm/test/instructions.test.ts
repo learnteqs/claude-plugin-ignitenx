@@ -74,6 +74,15 @@ describe("instructions", () => {
     expect(help).toContain("a placement whose suggestion is null, which gets placement_needs_human only");
   });
 
+  // The key is the tenant's URL name for good, so a stated one is kept, and uat follows this TM, not a mention.
+  test("keep a stated tenant key as written and tie uat to this TM's environment", () => {
+    const help = SubmitInputSchema.shape.fields.shape.tenantKey.description ?? "";
+    expect(help).toContain("Stated: exactly as written (TM takes 3-52 of a-z, 0-9 and single hyphens)");
+    expect(help).toContain("single hyphens), never adding uat. Not stated:");
+    expect(help).toContain("join whole words, never cutting one, while the total stays within 20 characters");
+    expect(help).toContain("the options environment is UAT, or it has no name and requestedEnvironment is UAT");
+  });
+
   test("keep placement to the preview and server names out of the fields", () => {
     for (const rule of [
       "placementPreview suggestions only",

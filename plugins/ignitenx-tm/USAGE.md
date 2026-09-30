@@ -242,6 +242,8 @@ and TM's page both show the text that was sent, so check it there.
 4. **The folder stays on Manual,** never Auto or Accept edits. Only Manual prompts for a tool the guard missed.
 5. **Routines aren't used for pastes.** Keep any agent routine on the Manual schedule, and check its folder before every
    **Run now** and after every edit. In another folder no hook loads, and routines don't expand slash commands.
+   `/ignitenx-tm:poll` is for people only, so a routine's prompt must not name it: ask for `tpa_get_identity` and
+   `tpa_get_options` directly, then a report.
 
 ### 3.4 When the agent stops with an error
 

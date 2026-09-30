@@ -2,11 +2,14 @@
 
 ## ignitenx-tm 0.2.2
 
-- The tenant key, which is also the tenant URL name, is one lower-case word: legal words such as Pvt and Ltd are
-  dropped and the rest joined, up to 20 letters, with `uat` at the end for a UAT tenant. "Lotus Learning Academy Pvt
-  Ltd" becomes `lotuslearningacademy`, and `lotuslearningacademyuat` on UAT.
+- When the text states no tenant key (also the tenant URL name), the agent makes one lower-case word from the
+  company name. Legal words such as Pvt and Ltd are dropped, and whole words are joined while the total stays within
+  20 characters, so "Lotus Learning Academy Pvt Ltd" becomes `lotuslearningacademy`. It ends with `uat` only when the
+  tenant is for UAT: TM's environment is UAT, or TM names none and the text asks for UAT. A key the text states is
+  kept as written, hyphens included.
 - `/ignitenx-tm:poll` can only be started by a person. The agent tried to start it itself, and the guard blocked
-  that as a failed step.
+  that as a failed step. So a routine or scheduled task can't start it either: its prompt should ask for the
+  `tpa_*` steps directly, not name `/ignitenx-tm:poll`.
 
 ## ignitenx-tm 0.2.1
 
