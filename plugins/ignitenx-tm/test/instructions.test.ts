@@ -74,6 +74,16 @@ describe("instructions", () => {
     expect(help).toContain("a placement whose suggestion is null, which gets placement_needs_human only");
   });
 
+  // The key is the tenant's URL name for good: one word, even when the text states one with hyphens, and uat
+  // follows this TM, not a mention.
+  test("make the tenant key one word and tie uat to this TM's environment", () => {
+    const help = SubmitInputSchema.shape.fields.shape.tenantKey.description ?? "";
+    expect(help).toContain("always one lower-case word of a-z and 0-9, never a hyphen");
+    expect(help).toContain("Not stated: the company's brand word");
+    expect(help).toContain("Stated: drop its hyphens and other marks (lotus-learning: lotuslearning)");
+    expect(help).toContain("the options environment is UAT, or it has no name and requestedEnvironment is UAT");
+  });
+
   test("keep placement to the preview and server names out of the fields", () => {
     for (const rule of [
       "placementPreview suggestions only",

@@ -59,6 +59,12 @@ describe("tool names stay in sync", () => {
     expect(allowed).not.toContain(qualified("tpa_submit_request"));
   });
 
+  // The guard blocks the Skill tool, so a model-started /poll only shows up as a failed step.
+  test("commands/poll.md can only be started by a person", () => {
+    const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(read("commands/poll.md"))?.[1] ?? "";
+    expect(front.split(/\r?\n/)).toContain("disable-model-invocation: true");
+  });
+
   test("USAGE.md's --allowedTools lists exactly the qualified names", () => {
     const uses = [...read("USAGE.md").matchAll(/--allowedTools\s+(\S+)/g)];
     expect(uses).toHaveLength(1);

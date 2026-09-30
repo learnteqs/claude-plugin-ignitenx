@@ -1,6 +1,7 @@
 ---
 description: Run one tenant-provisioning agent cycle against Tenant Manager (check the identity, read the options, and submit a pasted request if there is one)
 allowed-tools: mcp__plugin_ignitenx-tm_tpa-mcp__tpa_get_identity,mcp__plugin_ignitenx-tm_tpa-mcp__tpa_get_options
+disable-model-invocation: true
 ---
 
 # /ignitenx-tm:poll
