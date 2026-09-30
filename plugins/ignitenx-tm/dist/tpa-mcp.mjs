@@ -25043,7 +25043,7 @@ var SubmitInputSchema = strictObject({
   }),
   fields: strictObject({
     tenantKey: Text.describe(
-      "3-52 of a-z, 0-9 and single hyphens. Not stated: derive it from the company name (lower-case, spaces to single hyphens), source derived, confidence about 0.6"
+      "Also the tenant URL name: one lower-case word of a-z and 0-9. Not stated: from the company name, drop legal words (Pvt, Private, Ltd, Limited, LLP, LLC, Inc, Corp, Co, Company, The), join the rest up to 20 letters (Lotus Learning Academy Pvt Ltd: lotuslearningacademy), and end with uat for a UAT tenant (the options environment or the text says UAT: lotuslearningacademyuat); source derived, confidence about 0.6"
     ),
     title: Text.describe("The company display name as written, at most 100"),
     pageTitle: Text.describe("At most 100"),
@@ -25715,7 +25715,7 @@ function link(raw, requestId) {
 var TOOL_NAMES = ["tpa_get_identity", "tpa_get_options", "tpa_submit_request"];
 
 // src/server.ts
-var SERVER_VERSION = "0.2.1";
+var SERVER_VERSION = "0.2.2";
 var [IDENTITY, OPTIONS, SUBMIT] = TOOL_NAMES;
 function createServer(env = process.env, fetchImpl = fetch) {
   const server = new McpServer({ name: "tpa-mcp", version: SERVER_VERSION }, { instructions: getInstructions() });

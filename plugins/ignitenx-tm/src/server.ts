@@ -13,7 +13,7 @@ import { SubmitError, Submitter } from "./submit.js";
 import { TMClient, TMError } from "./tm-client.js";
 import { TOOL_NAMES } from "./tool-names.js";
 
-export const SERVER_VERSION = "0.2.1";
+export const SERVER_VERSION = "0.2.2";
 
 const [IDENTITY, OPTIONS, SUBMIT] = TOOL_NAMES;
 

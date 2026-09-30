@@ -1,5 +1,13 @@
 # Changelog
 
+## ignitenx-tm 0.2.2
+
+- The tenant key, which is also the tenant URL name, is one lower-case word: legal words such as Pvt and Ltd are
+  dropped and the rest joined, up to 20 letters, with `uat` at the end for a UAT tenant. "Lotus Learning Academy Pvt
+  Ltd" becomes `lotuslearningacademy`, and `lotuslearningacademyuat` on UAT.
+- `/ignitenx-tm:poll` can only be started by a person. The agent tried to start it itself, and the guard blocked
+  that as a failed step.
+
 ## ignitenx-tm 0.2.1
 
 Copies Tenant Manager's redaction fix (learnteqs/ignitenx#5025, #5024, #5017), so the plugin replaces these secrets
