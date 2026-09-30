@@ -1,6 +1,6 @@
-From: Meera Iyer <meera.iyer@brightpath.edu.in>
-To: sales@learnteq.com
-Cc: Arjun Rao <arjun.rao@learnteq.com>
+From: Meera Iyer <meera.iyer@brightpath.example>
+To: sales@learnteq.example
+Cc: Arjun Rao <arjun.rao@learnteq.example>
 Date: Mon, 21 Sep 2026 10:42 +0530
 Subject: Re: IgniteNX demo follow-up - Brightpath Academy
 
@@ -8,7 +8,7 @@ Hi Arjun,
 
 Thanks for the demo on Friday, the team loved the trainings module. We'd like to go ahead with a new LMS for Brightpath Academy through Repute.
 
-- Admin: Meera Iyer, username meera.iyer, meera.iyer@brightpath.edu.in
+- Admin: Meera Iyer, username meera.iyer, meera.iyer@brightpath.example
 - Standard plan
 - English only for now
 - We are in Bengaluru
@@ -23,10 +23,10 @@ Head of L&D, Brightpath Academy
 This email and any attachments are confidential and intended solely for the addressee. If you are not the intended
 recipient, please delete it and notify the sender.
 
-On Fri, 18 Sep 2026 at 16:05, Arjun Rao <arjun.rao@learnteq.com> wrote:
+On Fri, 18 Sep 2026 at 16:05, Arjun Rao <arjun.rao@learnteq.example> wrote:
 > Hi Meera,
 >
-> Thanks for your time today. The recording is here: https://learnteq.zoom.us/rec/share/Xy12AbCd
+> Thanks for your time today. The recording is here: https://zoom.example/rec/share/Xy12AbCd
 > The Enterprise plan adds SSO and custom reports, if you need them later.
 >
 > Let me know if you'd like to proceed.

@@ -24351,24 +24351,311 @@ function pattern(re, group = 0) {
     return out;
   };
 }
-var LABEL = new RegExp(
-  `(?:${ci("password|passwd|pwd|secret")}|${ci("api")}[_ -]?${ci("key")}|${ci("token")})["']?[${WS}]*[:=]`,
-  "gu"
+var COLON = `["']?[${WS}]*[:=]`;
+var KEYWORD = `(?:${ci("password|passwd|secret")}|${ci("api")}[_ -]?${ci("key")}|(${ci("token")}))(${ci("s")}|\\(${ci("s")}\\))?`;
+var BARE_LABEL = new RegExp(`(?:${KEYWORD}|${ci("pwd")})${COLON}`, "gu");
+var KEYWORD_AT = new RegExp(KEYWORD, "gu");
+var MAX_WORDS = 4;
+var MAX_WORD_CODE_POINTS = 64;
+var METERING = new RegExp(
+  `^[("'\\[]?(?:${ci("budget|limit|count|usage|used|cost|quota|price|pricing|rate|spend|consumption|allocation")}|${ci("allowance|allotment|credit|volume|pack|cap|balance|remaining|utilisation|utilization|per|overage")})${ci("s")}?(?:[^A-Za-z]|$)`,
+  "u"
 );
+var NUMBER = new RegExp(
+  `^["'(\\[]?~?(?:\\$|US\\$|\\u20ac|\\u00a3|\\u20b9|${ci("rs")}\\.?|${ci("inr|usd")})?[0-9][0-9,.]*(?:${ci("k|m|lakh|crore")}|%)?(?:[-/][0-9][0-9,.]*(?:${ci("k|m")})?)?(?:/-|\\+|/(?:${ci("month|mo|day|week|year|yr|annum|user|seat|learner")}))?["')\\]}]*[,;]?$`,
+  "u"
+);
+var PLAIN_WORD = /^(?:[A-Z]?[a-z]{1,12}(?:-[a-z]{1,12})?|[A-Z]{2,9})[).,;:!\]}]{0,2}$/u;
+function isPlainWord(s) {
+  return PLAIN_WORD.test(s);
+}
+var ADDRESS = "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:[.][A-Za-z0-9-]+)*[.][A-Za-z]{2,}";
+var EMAILS = new RegExp(`^(?:${ci("mailto")}:)?${ADDRESS}(?:[;,/]${ADDRESS})*[.,;)]?$`, "u");
 function labelValues(s) {
-  const labelEnds = [...s.matchAll(LABEL)].map((m) => m.index + m[0].length);
-  const ends = new Set(labelEnds);
+  const labels = /* @__PURE__ */ new Map();
+  const add = (end2, l) => {
+    const seen = labels.get(end2);
+    labels.set(
+      end2,
+      seen ? {
+        bare: l.bare || seen.bare,
+        worded: l.worded || seen.worded,
+        inner: l.inner && seen.inner,
+        usage: l.usage && seen.usage,
+        singular: l.singular || seen.singular
+      } : l
+    );
+  };
+  eachMatch(s, BARE_LABEL, (m) => {
+    const usage = m[1] !== void 0 && m[2] !== void 0;
+    add(m.index + m[0].length, { bare: true, worded: false, inner: false, usage, singular: m[2] === void 0 });
+  });
+  eachMatch(s, KEYWORD_AT, (m) => {
+    wordedEnds(s, m.index + m[0].length, m[1] !== void 0, (end2, inner, metering) => {
+      const usage = m[1] !== void 0 && (m[2] !== void 0 || metering);
+      add(end2, { bare: false, worded: true, inner, usage, singular: false });
+    });
+  });
   const out = [];
   let end = 0;
-  for (const labelEnd of labelEnds) {
-    const start = skip(s, labelEnd, true);
+  for (const [labelEnd, label2] of [...labels].sort((a, b) => a[0] - b[0])) {
+    let start = valueStart(s, labelEnd);
+    const worded = label2.worded && !label2.bare;
+    let list2 = false;
+    if (worded) {
+      let word;
+      let blank2;
+      [start, word, blank2, list2] = pastKeys(s, labelEnd, start, labels);
+      if (blank2) {
+        continue;
+      }
+      if (word && charCount(s.slice(...word)) >= 4) {
+        out.push(word);
+      }
+    }
     end = start < end ? end : skip(s, start, false);
-    if (ends.has(end) || charCount(s.slice(start, Math.min(end, start + 8))) < 4) {
+    const run = s.slice(start, end);
+    const blank = labels.get(end)?.singular === true;
+    const prose = PLAIN_WORD.test(run);
+    const wordedKeeps = worded && (EMAILS.test(unwrapped(run)) || label2.inner && prose);
+    const kept = wordedKeeps || label2.usage && (NUMBER.test(run) || prose);
+    if (blank || kept) {
       continue;
     }
-    out.push([start, end]);
+    const stop = valueEnd(s, start, end, labels);
+    if (charCount(s.slice(start, Math.min(stop, start + 8))) >= 4) {
+      out.push([start, stop]);
+    }
+    if (list2) {
+      listValues(s, stop, labels, out);
+    }
   }
   return out;
+}
+function wordedEnds(s, i, token, found) {
+  const open2 = s.codePointAt(i);
+  if (open2 !== 40 && open2 !== 91) {
+    const next = skipH(s, i);
+    if (next === i) {
+      return;
+    }
+    i = next;
+  }
+  let depth = 0;
+  let first = false;
+  for (let word = 0; word < MAX_WORDS; word++) {
+    const r0 = s.codePointAt(i) ?? 0;
+    if (i >= s.length || spaceCode(r0) || r0 === 61 || r0 === 58 && depth === 0) {
+      return;
+    }
+    let j = i;
+    let n = 0;
+    for (; j < s.length && n <= MAX_WORD_CODE_POINTS + 1; n++) {
+      const r = s.codePointAt(j) ?? 0;
+      const w = width(r);
+      if (spaceCode(r) || r === 61) {
+        break;
+      }
+      if (r === 58 && j > i && startsSpace(s, j + w) && n <= MAX_WORD_CODE_POINTS) {
+        found(j + w, depth > 0, token && (first || METERING.test(s.slice(i, j))));
+        if (depth === 0) {
+          return;
+        }
+      }
+      if (r === 40 || r === 91 || r === 123) {
+        depth++;
+      } else if (r === 41 || r === 93 || r === 125) {
+        depth = Math.max(depth - 1, 0);
+      }
+      j += w;
+    }
+    if (n > MAX_WORD_CODE_POINTS) {
+      return;
+    }
+    const metering = token && METERING.test(s.slice(i, j));
+    first = first || word === 0 && metering;
+    const k = skip(s, j, true);
+    if ((s[k] === ":" || s[k] === "=") && startsSpace(s, k + 1)) {
+      found(k + 1, depth > 0, first || metering);
+      if (depth === 0) {
+        return;
+      }
+    }
+    i = skipH(s, j);
+    if (i === j) {
+      return;
+    }
+  }
+}
+function pastKeys(s, labelEnd, start, labels) {
+  let word = null;
+  let list2 = false;
+  for (let n = 0; n < MAX_WORDS; n++) {
+    const stop = skip(s, start, false);
+    const next = skipH(s, stop);
+    const lineEnds = next >= s.length || lineBreak(s.charCodeAt(next));
+    if (stop === start) {
+      return [start, word, false, list2];
+    }
+    if (isKeyRun(s, start, stop, labels)) {
+      for (let k = labelEnd; k < start; k++) {
+        if (lineBreak(s.charCodeAt(k))) {
+          return [start, word, true, list2];
+        }
+      }
+      if (lineEnds) {
+        const after = skip(s, next, true);
+        if (after >= s.length) {
+          return [start, word, false, list2];
+        }
+        return [after, word, isKeyRun(s, after, skip(s, after, false), labels), false];
+      }
+      [start, list2] = [next, true];
+    } else if (word === null && s.slice(stop, next) === " " && LETTERS.test(s.slice(start, stop)) && keyThenValue(s, next, labels)) {
+      [word, start] = [[start, stop], next];
+    } else {
+      return [start, word, false, list2];
+    }
+  }
+  return [start, word, false, list2];
+}
+function keyThenValue(s, i, labels) {
+  const stop = skip(s, i, false);
+  const v = skipH(s, stop);
+  const end = skip(s, v, false);
+  return isKeyRun(s, i, stop, labels) && v > stop && end > v && !PLAIN_WORD.test(s.slice(v, end));
+}
+function listValues(s, i, labels, out) {
+  for (let n = 0; n < MAX_WORDS; n++) {
+    const key = skipH(s, i);
+    const stop = skip(s, key, false);
+    const v = skipH(s, stop);
+    const end = skip(s, v, false);
+    if (!isKeyRun(s, key, stop, labels) || v === stop || end === v) {
+      return;
+    }
+    if (charCount(s.slice(v, Math.min(end, v + 8))) >= 4 && !PLAIN_WORD.test(s.slice(v, end))) {
+      out.push([v, end]);
+    }
+    i = end;
+  }
+}
+function isKeyRun(s, start, stop, labels) {
+  return stop > start && s[stop - 1] === ":" && keyWord(s.slice(start, stop - 1)) && !labels.has(stop);
+}
+function keyWord(w) {
+  return /^[A-Za-z_./()-]+$/.test(w) && /[A-Za-z]/.test(w);
+}
+var LETTERS = /^[A-Za-z]+$/;
+function startsSpace(s, i) {
+  return i < s.length && spaceCode(s.codePointAt(i) ?? 0);
+}
+function skipH(s, i) {
+  while (i < s.length) {
+    const cp = s.codePointAt(i) ?? 0;
+    if (!spaceCode(cp) || lineBreak(cp)) {
+      break;
+    }
+    i += width(cp);
+  }
+  return i;
+}
+function eachMatch(s, re, found) {
+  re.lastIndex = 0;
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    found(m);
+    re.lastIndex = m.index + 1;
+  }
+}
+var asciiAlnum = (cp) => cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122;
+var lineBreak = (cp) => cp === 10 || cp === 8232 || cp === 8233;
+function valueStart(s, i) {
+  i = skip(s, i, true);
+  for (let n = 0; ; ) {
+    const end = separatorEnd(s, i);
+    const counted = end >= 0 && /[^>]/.test(s.slice(i, end));
+    if (end < 0 || counted && n === 2) {
+      return i;
+    }
+    if (counted) {
+      n++;
+    }
+    i = skip(s, end, true);
+  }
+}
+function separatorEnd(s, i) {
+  for (let n = 0; ; n++) {
+    if (i >= s.length) {
+      return n > 0 ? i : -1;
+    }
+    const cp = s.codePointAt(i) ?? 0;
+    if (spaceCode(cp)) {
+      return n > 0 ? i : -1;
+    }
+    if (n === 3 || asciiAlnum(cp)) {
+      return -1;
+    }
+    i += width(cp);
+  }
+}
+function valueEnd(s, start, end, labels) {
+  end = Math.max(end, quoteEnd(s, start));
+  for (let from = start; !/[0-9A-Za-z]/.test(s.slice(from, end)); ) {
+    const next = skipH(s, end);
+    const stop = skip(s, next, false);
+    const masked = isMask(s.slice(from, end)) && ([...s.slice(end, next)].length > 1 || s[next] === "(");
+    if (stop === next || labels.get(stop)?.singular || isKey(s, next, stop) || masked) {
+      break;
+    }
+    [from, end] = [next, stop];
+  }
+  return end;
+}
+var MASK = /* @__PURE__ */ new Set([42, 8226, 9679, 8727]);
+function isMask(run) {
+  const chars = [...run];
+  return chars.length >= 4 && chars.every((c) => MASK.has(c.codePointAt(0) ?? 0));
+}
+function isKey(s, start, stop) {
+  if (s[stop - 1] === ":") {
+    return keyWord(s.slice(start, stop - 1)) && hasRun(s, skipH(s, stop));
+  }
+  const k = skipH(s, stop);
+  return keyWord(s.slice(start, stop)) && (s[k] === ":" || s[k] === "=") && hasRun(s, skipH(s, k + 1));
+}
+function hasRun(s, i) {
+  return i < s.length && !spaceCode(s.codePointAt(i) ?? 0);
+}
+var QUOTES = /* @__PURE__ */ new Map([
+  [34, 34],
+  [39, 39],
+  [96, 96],
+  [8220, 8221],
+  [8216, 8217]
+]);
+var MAX_QUOTED = 64;
+var WRAPPERS = new Map([...QUOTES, [60, 62], [40, 41]]);
+function quoteEnd(s, start) {
+  const closing = QUOTES.get(s.codePointAt(start) ?? -1);
+  if (closing === void 0) {
+    return start;
+  }
+  let i = start + 1;
+  for (let n = 0; n < MAX_QUOTED && i < s.length; n++) {
+    const cp = s.codePointAt(i) ?? 0;
+    i += width(cp);
+    if (lineBreak(cp)) {
+      break;
+    }
+    if (cp === closing && !asciiAlnum(s.codePointAt(i) ?? -1)) {
+      return i;
+    }
+  }
+  return start;
+}
+function unwrapped(v) {
+  const closing = WRAPPERS.get(v.codePointAt(0) ?? -1);
+  return v.length > 1 && closing !== void 0 && v.charCodeAt(v.length - 1) === closing ? v.slice(1, -1) : v;
 }
 function skip(s, i, space) {
   while (i < s.length) {
@@ -24402,7 +24689,7 @@ var SECRET_PATTERNS = [
   { code: "azure_sas", find: pattern(/[?&]sig=([A-Za-z0-9_%/+=]{16,})/dgu, 1) },
   { code: "anthropic_key", find: pattern(/\bsk-ant-[A-Za-z0-9_-]{20,}/dgu) },
   { code: "openai_key", find: pattern(/\bsk-[A-Za-z0-9_-]{20,}/dgu) },
-  { code: "aws_access_key", find: pattern(/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/dgu) },
+  { code: "aws_access_key", find: pattern(/(?:^|[^0-9A-Z])((?:AKIA|ASIA)[0-9A-Z]{16,})/dgu, 1) },
   { code: "github_token", find: pattern(/\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})\b/dgu) },
   { code: "password_line", find: labelValues }
 ];
@@ -24411,7 +24698,7 @@ function findSecrets(s) {
   const spans = [];
   SECRET_PATTERNS.forEach((p, priority) => {
     for (const [start, end] of p.find(s)) {
-      if (s.slice(start, end) !== REDACTED) {
+      if (!isRedacted(s.slice(start, end))) {
         spans.push({ start, end: s.charCodeAt(end) === VS16 ? end + 1 : end, priority, code: p.code });
       }
     }
@@ -24428,6 +24715,18 @@ function findSecrets(s) {
   }
   return merged2;
 }
+function isRedacted(found) {
+  if (!found.startsWith(REDACTED)) {
+    return false;
+  }
+  for (const c of found.slice(REDACTED.length)) {
+    if (!CLOSING.has(c.codePointAt(0) ?? 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+var CLOSING = /* @__PURE__ */ new Set([44, 46, 59, 58, 33, 63, 41, 93, 125, 34, 39, 8221, 8217, 187]);
 function containsSecret(s) {
   return findSecrets(s).length > 0;
 }
@@ -25050,7 +25349,7 @@ var Validator = class {
       return true;
     }
     const text = this.secrets.length > 0 ? normalizeText(s).text : "";
-    return this.secrets.some((secret) => text.includes(secret));
+    return this.secrets.some((secret) => secret.whole ? hasWord(text, secret.text) : text.includes(secret.text));
   }
 };
 function pastedSecrets(paste, maxChars) {
@@ -25058,17 +25357,35 @@ function pastedSecrets(paste, maxChars) {
     return [];
   }
   const sent = redact(paste).text;
-  const out = /* @__PURE__ */ new Set();
+  const out = /* @__PURE__ */ new Map();
+  const keep = (secret, whole) => {
+    if (charCount(secret) >= MIN_SECRET_CHARS && !sent.includes(secret)) {
+      out.set(secret, whole && (out.get(secret) ?? true));
+    }
+  };
   for (const text of redactedTexts(paste)) {
-    for (const secret of [text, text.replace(EDGE_PUNCTUATION, "")]) {
-      if (charCount(secret) >= MIN_SECRET_CHARS && !sent.includes(secret)) {
-        out.add(secret);
+    const bare = text.replace(LEADING_SEPARATORS, "");
+    keep(text, false);
+    for (const form of [bare, text.replace(EDGE_PUNCTUATION, ""), bare.replace(EDGE_PUNCTUATION, "")]) {
+      if (form !== text && !isPlainWord(form)) {
+        keep(form, true);
       }
     }
   }
-  return [...out];
+  return [...out].map(([text, whole]) => ({ text, whole }));
 }
-var EDGE_PUNCTUATION = /^["'`*_()[\]{}<>.,;:!?]+|["'`*_()[\]{}<>.,;:!?]+$/g;
+function hasWord(s, word) {
+  for (let i = s.indexOf(word); i >= 0; i = s.indexOf(word, i + 1)) {
+    if (!ALNUM.test(s[i - 1] ?? "") && !ALNUM.test(s[i + word.length] ?? "")) {
+      return true;
+    }
+  }
+  return false;
+}
+var ALNUM = /^[0-9A-Za-z]$/;
+var EDGE = `"'\`*_()[\\]{}<>.,;:!?${String.fromCharCode(8220, 8221, 8216, 8217, 171, 187)}`;
+var EDGE_PUNCTUATION = new RegExp(`^[${EDGE}]+|[${EDGE}]+$`, "gu");
+var LEADING_SEPARATORS = /^(?:[^\s0-9A-Za-z]+\s+)+/u;
 function languages(o) {
   return o.languages.map((l) => l.code);
 }
@@ -25398,7 +25715,7 @@ function link(raw, requestId) {
 var TOOL_NAMES = ["tpa_get_identity", "tpa_get_options", "tpa_submit_request"];
 
 // src/server.ts
-var SERVER_VERSION = "0.2.0";
+var SERVER_VERSION = "0.2.1";
 var [IDENTITY, OPTIONS, SUBMIT] = TOOL_NAMES;
 function createServer(env = process.env, fetchImpl = fetch) {
   const server = new McpServer({ name: "tpa-mcp", version: SERVER_VERSION }, { instructions: getInstructions() });

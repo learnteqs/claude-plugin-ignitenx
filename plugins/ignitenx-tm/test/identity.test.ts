@@ -73,7 +73,7 @@ describe("checkIdentity", () => {
   });
 
   test.each([
-    ["another identity", { ...(meFor(["plans.view"]) as object), email: "someone@learnteq.com" }, "someone other"],
+    ["another identity", { ...(meFor(["plans.view"]) as object), email: "someone@learnteq.example" }, "someone other"],
     ["a mismatched oid only", { ...(meFor(["plans.view"]) as object), oid: "key:ffffffffffffffff" }, "someone other"],
     ["a super admin", meFor(["plans.view"], { superAdmin: true }), "super-admin"],
     ["no superAdmin field", meFor(["plans.view"], { superAdmin: undefined }), "super-admin"],

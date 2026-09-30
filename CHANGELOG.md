@@ -1,5 +1,30 @@
 # Changelog
 
+## ignitenx-tm 0.2.1
+
+Copies Tenant Manager's redaction fix (learnteqs/ignitenx#5025, #5024, #5017), so the plugin replaces these secrets
+in the paste before sending it, and refuses a summary, note or value that repeats one:
+
+- a password after a label with up to four words before its colon: "Temp password for the admin: …", "API key for
+  staging: …", "Password (admin): …", "Password(admin): …". The label ends at its first colon (or `=`) that has a
+  space after it and is outside brackets. A key right after it is skipped ("Password (admin): Temp: …", "Primary Key:
+  …"), and so is a key at the end of its line, whose value is on the next line;
+- a password inside brackets after a label ("password (for admin: …)"), and more keys on a line after a skipped key
+  ("Passwords (LMS): admin: … trainer: …");
+- a password behind a separator, such as "Password: -> …", a long arrow, a bullet, an emoji or a short mask, and a
+  quoted password with a space;
+- a password after a plural label: "Passwords: …", "Secrets: …", "API keys: …";
+- an AWS access key followed straight away by a digit, a keycap or more capitals, or glued after a lowercase letter or
+  "_".
+
+These stay as pasted: a count, an amount or a plain word after token usage ("Max tokens: 4096",
+`{"max_tokens": 4096}`, "Token budget/month: 25000", "GenAI token budget: $500/month", "Token budget: approved"), an
+email address after "Send the password to:", the next field after a placeholder ("Password : ********    Role :
+Admin", "Password login: Disabled  SSO: Azure AD"), a plain word inside brackets ("(Note: case sensitive)"), and a
+key on the line after a label with words. The pasted-secret rule also finds a secret behind a separator or in curly
+quotes or guillemets, but never takes a plain word such as "Pending" on its own. The shared text vectors grow from 99
+to 324.
+
 ## ignitenx-tm 0.2.0
 
 The agent now records a pasted tenant request in Tenant Manager as a **shadow request**. Nothing is provisioned,

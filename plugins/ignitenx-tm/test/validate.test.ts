@@ -151,7 +151,7 @@ describe("rules mirrored from TM", () => {
     ["empty title", { "fields.title.value": "" }, "fields.title.value", "length"],
     ["title with a tab", { "fields.title.value": "Acme\tLearning" }, "fields.title.value", "free_text"],
     ["title not trimmed", { "fields.title.value": " Acme" }, "fields.title.value", "free_text"],
-    ["title with www.", { "fields.title.value": "WWW.acme.in" }, "fields.title.value", "free_text"],
+    ["title with www.", { "fields.title.value": "WWW.acme.example" }, "fields.title.value", "free_text"],
     ["title with a backtick", { "fields.title.value": "Acme `x`" }, "fields.title.value", "free_text"],
     [
       "title with an img tag",
@@ -162,7 +162,7 @@ describe("rules mirrored from TM", () => {
     ["title with a URL", { "fields.title.value": "Acme https://evil.example" }, "fields.title.value", "free_text"],
     ["title with a bidi override", { "fields.title.value": "Acme\u202eeviL" }, "fields.title.value", "free_text"],
     ["title with tag characters", { "fields.title.value": "Acme\u{e0041}" }, "fields.title.value", "free_text"],
-    ["link with no scheme", { "fields.title.value": "Acme zoom.us/j/8123" }, "fields.title.value", "free_text"],
+    ["link with no scheme", { "fields.title.value": "Acme zoom.example/j/8123" }, "fields.title.value", "free_text"],
     ["tel: link", { "fields.title.value": "Acme tel:+911234" }, "fields.title.value", "free_text"],
     ["protocol-relative link", { "fields.title.value": "Acme //10.0.0.1/x" }, "fields.title.value", "free_text"],
     ["unlisted scheme", { "fields.title.value": "Acme gopher://10.0.0.1" }, "fields.title.value", "free_text"],
@@ -179,7 +179,7 @@ describe("rules mirrored from TM", () => {
     ["region of 41", { "fields.requestedRegion": stated(long(41)) }, "fields.requestedRegion.value", "length"],
     [
       "meeting link in the region",
-      { "fields.requestedRegion": stated("teams.microsoft.com/l/x") },
+      { "fields.requestedRegion": stated("teams.example/l/x") },
       "fields.requestedRegion.value",
       "free_text",
     ],
@@ -197,7 +197,7 @@ describe("rules mirrored from TM", () => {
     ],
     [
       "a DSN as admin email",
-      { "fields.adminEmail.value": "postgres://u:pw1234@db.acme.in" },
+      { "fields.adminEmail.value": "postgres://u:pw1234@db.acme.example" },
       "fields.adminEmail.value",
       "secret_in_value",
     ],
@@ -395,8 +395,8 @@ describe("rules mirrored from TM", () => {
     ["partner missing for a scoped key", { "fields.partnerId": absent() }, "fields.partnerId", "partner_not_allowed"],
     ["empty summary", { summary: "" }, "summary", "length"],
     ["summary of 501", { summary: long(501) }, "summary", "length"],
-    ["summary with a link", { summary: "See https://acme.in" }, "summary", "free_text"],
-    ["protocol-relative link in the summary", { summary: "See //acme.in/x" }, "summary", "free_text"],
+    ["summary with a link", { summary: "See https://acme.example" }, "summary", "free_text"],
+    ["protocol-relative link in the summary", { summary: "See //acme.example/x" }, "summary", "free_text"],
     ["summary with a JWT", { summary: `Token eyJ${long(10)}.${long(10)}.${long(10)}` }, "summary", "secret_in_value"],
     ["summary with an env password", { summary: "DB_PASSWORD=hunter22" }, "summary", "secret_in_value"],
     ["summary with a text selector", { summary: `Great${cps(0xfe00)}` }, "summary", "free_text"],
@@ -446,7 +446,7 @@ describe("rules mirrored from TM", () => {
     ["flag note of 201", { flags: [{ code: "other", field: "", note: long(201) }] }, "flags[0].note", "length"],
     [
       "websocket link in a note",
-      { flags: [{ code: "other", field: "", note: "wss://acme.in/x" }] },
+      { flags: [{ code: "other", field: "", note: "wss://acme.example/x" }] },
       "flags[0].note",
       "free_text",
     ],
@@ -497,9 +497,9 @@ describe("rules mirrored from TM", () => {
     ["fields.tenantKey", "acme\u200b-learning", "invalid_format"],
     ["fields.companyId", "RC-\u00ad4471", "invalid_format"],
     ["fields.adminUserName", "priya\u202e.n", "invalid_format"],
-    ["fields.adminEmail", "priya.n@acme\u2060learning.in", "invalid_format"],
-    ["fields.statedRequesterEmail", "priya.n@acmelearning.in\u{e0041}", "invalid_format"],
-    ["fields.adminEmail", "priya.n@acmelearning.in\r", "invalid_format"],
+    ["fields.adminEmail", "priya.n@acme\u2060learning.example", "invalid_format"],
+    ["fields.statedRequesterEmail", "priya.n@acmelearning.example\u{e0041}", "invalid_format"],
+    ["fields.adminEmail", "priya.n@acmelearning.example\r", "invalid_format"],
     ["fields.timeZone", "Asia/Kolkata\ufeff", "invalid_time_zone"],
     ["fields.timeZone", "UTC\u{e0100}", "invalid_time_zone"],
     ["fields.tenantKey", `acme${cps(0x3164)}-learning`, "invalid_format"],
@@ -574,6 +574,7 @@ describe("the pasted-secret rule of the plugin's own", () => {
   // Abc, is under 4 characters and is not looked for.
   const sourceText = `${SOURCE}\nTemp password: Xy7kLm92Qz\nDSN postgres://lms:Abc@db.acme.internal/lms`;
   const pasted = (set: Record<string, unknown>) => errorsOf({ sourceText, ...set });
+  const quoted = (open: number, close: number) => String.fromCharCode(open) + "Vq8rTn41Ws" + String.fromCharCode(close);
 
   test("a value equal to a secret that only its label showed is refused", () => {
     expect(containsSecret("Xy7kLm92Qz")).toBe(false);
@@ -606,6 +607,30 @@ describe("the pasted-secret rule of the plugin's own", () => {
     expect(errorsOf({ sourceText: wrapped, summary: "They sent Zenith@2026! as the login." })).toEqual([
       { path: "summary", code: "secret_in_value" },
     ]);
+  });
+
+  test.each<[string, string]>([
+    ["a label with words before its colon", "Temp password for the admin: Vq8rTn41Ws"],
+    ["a separator before the value", "Password: -> Vq8rTn41Ws"],
+    ["a long arrow before the value", "Password: ----> Vq8rTn41Ws"],
+    ["three separators before the value", "Password: - - - Vq8rTn41Ws"],
+    ["curly quotes around the value", `Temp password for the admin: ${quoted(0x201c, 0x201d)}`],
+    ["guillemets around the value", `Password (admin): ${quoted(0xab, 0xbb)}`],
+  ])("a secret after %s is refused when repeated bare", (_, line) => {
+    expect(errorsOf({ sourceText: `${SOURCE}\n${line}`, summary: "They sent Vq8rTn41Ws as the login." })).toEqual([
+      { path: "summary", code: "secret_in_value" },
+    ]);
+  });
+
+  test.each<[string, string, string]>([
+    [
+      "a word after a placeholder inside a longer word",
+      "Password: -------- sent separately by SMS",
+      "Chatbot left absent.",
+    ],
+    ["a plain word after a placeholder", "Password: ---- Pending", "Pending: the admin password."],
+  ])("%s is not a pasted secret", (_, line, summary) => {
+    expect(errorsOf({ sourceText: `${SOURCE}\n${line}`, summary })).toEqual([]);
   });
 
   test("a redacted run that the sent paste still shows elsewhere is not treated as hidden", () => {
@@ -642,7 +667,7 @@ describe("never stricter than TM", () => {
   test.each<[string, Record<string, unknown>]>([
     ["title of 100", { "fields.title.value": long(100) }],
     ["title with an ampersand", { "fields.title.value": "Johnson & Johnson" }],
-    ["company name that is a domain", { "fields.title.value": "Naukri.com" }],
+    ["company name that is a domain", { "fields.title.value": "Jobs.example" }],
     ["abbreviation with a dot", { "fields.title.value": "Acme Pvt. Ltd/India" }],
     ["label that ends like a scheme", { "fields.title.value": "Hotel: Grand Profile: Acme" }],
     ["title in Tamil", { "fields.title.value": "அகரம் கல்வி நிறுவனம்" }],
@@ -684,8 +709,8 @@ describe("never stricter than TM", () => {
       "fields.title.evidence": ["Temp password: Welcome@123", "Welcome@123"],
     }],
     ["a URL in the source and a quote", {
-      sourceText: `${SOURCE}\nsee https://acme.in/demo`,
-      "fields.title.evidence": ["see https://acme.in/demo"],
+      sourceText: `${SOURCE}\nsee https://acme.example/demo`,
+      "fields.title.evidence": ["see https://acme.example/demo"],
     }],
     ["a note of 200", { flags: [{ code: "other", field: "", note: long(200) }] }],
     ["20 flags", { flags: Array(20).fill({ code: "non_english", field: "", note: "" }) }],
@@ -705,11 +730,11 @@ describe("never stricter than TM", () => {
     ["company id with a space", { "fields.companyId.value": "RC 4471" }],
     ["company id of 65", { "fields.companyId.value": long(65) }],
     ["admin user of 2", { "fields.adminUserName.value": "ab" }],
-    ["email with two dots", { "fields.adminEmail.value": "a..b@acme.in" }],
+    ["email with two dots", { "fields.adminEmail.value": "a..b@acme.example" }],
     ["email without a dot in the domain", { "fields.adminEmail.value": "a@acme" }],
-    ["email with a display name", { "fields.adminEmail.value": "Priya N <priya.n@acmelearning.in>" }],
-    ["email with an upper-case domain", { "fields.statedRequesterEmail.value": "priya@ACME.in" }],
-    ["quoted local part", { "fields.adminEmail.value": "\"a b\"@acme.in" }],
+    ["email with a display name", { "fields.adminEmail.value": "Priya N <priya.n@acmelearning.example>" }],
+    ["email with an upper-case domain", { "fields.statedRequesterEmail.value": "priya@ACME.example" }],
+    ["quoted local part", { "fields.adminEmail.value": "\"a b\"@acme.example" }],
     ["Mars/Base", { "fields.timeZone.value": "Mars/Base" }],
     ["Local", { "fields.timeZone.value": "Local" }],
     ["lower-case utc", { "fields.timeZone.value": "utc" }],
@@ -721,8 +746,8 @@ describe("never stricter than TM", () => {
       { "fields.companyId.value": `RC-4471${cps(0x23, 0xfe0f, 0x20e3)}` },
     ],
     ["tenant key with a lone surrogate", { "fields.tenantKey.value": "acme\ud800" }],
-    ["email with a non-breaking space", { "fields.adminEmail.value": "priya\u00a0n@acme.in" }],
-    ["email with a Cyrillic letter", { "fields.adminEmail.value": "priya.n@\u0430cme.in" }],
+    ["email with a non-breaking space", { "fields.adminEmail.value": "priya\u00a0n@acme.example" }],
+    ["email with a Cyrillic letter", { "fields.adminEmail.value": "priya.n@\u0430cme.example" }],
   ])("leaves %s to TM", (_, set) => {
     expect(errorsOf(set)).toEqual([]);
   });

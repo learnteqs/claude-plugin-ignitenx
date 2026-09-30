@@ -1,5 +1,5 @@
-From: Vikram Shah <vikram.shah@learnteq.com>
-To: Arjun Rao <arjun.rao@learnteq.com>, Rahul Menon <rahul.menon@learnteq.com>
+From: Vikram Shah <vikram.shah@learnteq.example>
+To: Arjun Rao <arjun.rao@learnteq.example>, Rahul Menon <rahul.menon@learnteq.example>
 Date: Mon, 28 Sep 2026 16:55 +0530
 Subject: Acme Foods?
 
@@ -10,5 +10,5 @@ Should we set something up in advance so it's ready when they sign?
 
 Vikram
 
-On Mon, 28 Sep 2026 at 16:40, Rahul Menon <rahul.menon@learnteq.com> wrote:
+On Mon, 28 Sep 2026 at 16:40, Rahul Menon <rahul.menon@learnteq.example> wrote:
 > Let's not create anything until they actually ask. I'll ping their HR head this week.

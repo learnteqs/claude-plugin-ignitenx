@@ -1,6 +1,6 @@
-From: Anita Desai <anita.desai@contosotraining.in>
-To: onboarding@learnteq.com
-Cc: Vikram Shah <vikram.shah@learnteq.com>
+From: Anita Desai <anita.desai@contosotraining.example>
+To: onboarding@learnteq.example
+Cc: Vikram Shah <vikram.shah@learnteq.example>
 Date: Fri, 25 Sep 2026 14:05 +0530
 Subject: LMS for Contoso Training - UAT and live
 
@@ -9,9 +9,9 @@ Hi,
 We're ready to start with IgniteNX for Contoso Training (partner: Repute).
 
 Can we get a UAT tenant first so our team can try it out, and then the live one next month once UAT is signed off?
-Our UAT portal is at https://uat.contosotraining.in if that helps.
+Our UAT portal is at https://uat.contosotraining.example if that helps.
 
-Admin: Anita Desai, username anita.d, anita.desai@contosotraining.in
+Admin: Anita Desai, username anita.d, anita.desai@contosotraining.example
 Standard plan, English and Hindi, English as the default. We're in Mumbai.
 
 Best,
