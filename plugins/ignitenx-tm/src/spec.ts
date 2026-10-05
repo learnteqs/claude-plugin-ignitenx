@@ -145,8 +145,12 @@ export const SubmitInputSchema = z.strictObject({
   fields: z
     .strictObject({
       tenantKey: Text.describe(
-        "3-52 of a-z, 0-9 and single hyphens. Not stated: derive it from the company name (lower-case, spaces to " +
-          "single hyphens), source derived, confidence about 0.6",
+        "Also the tenant URL name: always one lower-case word of a-z and 0-9, never a hyphen. Not stated: the " +
+          "company's brand word, its most distinctive one, never a legal word (Pvt, Private, Ltd, Limited, LLP, LLC, " +
+          "Inc, Corp, Co, Company, The): Lotus Learning Academy Pvt Ltd: lotus. Stated: drop its hyphens and other " +
+          "marks (lotus-learning: lotuslearning). End it with uat for a UAT tenant, unless it already does: the " +
+          "options environment is UAT, or it has no name and requestedEnvironment is UAT (lotusuat). Source stated " +
+          "only when the text gives exactly this value, else derived, confidence about 0.6",
       ),
       title: Text.describe("The company display name as written, at most 100"),
       pageTitle: Text.describe("At most 100"),

@@ -1,6 +1,6 @@
 {
   "name": "ignitenx-tm-tpa-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Source and build for the ignitenx-tm plugin's bundled tpa-mcp server and tool guard.",
   "type": "module",

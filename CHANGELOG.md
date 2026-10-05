@@ -1,5 +1,15 @@
 # Changelog
 
+## ignitenx-tm 0.2.2
+
+- The tenant key, which is also the tenant URL name, is always one lower-case word with no hyphens. When the text
+  states none, the agent uses the company's brand word: "Lotus Learning Academy Pvt Ltd" becomes `lotus`. A key the
+  text states loses its hyphens: `lotus-learning` becomes `lotuslearning`. It ends with `uat` for a UAT tenant: TM's
+  environment is UAT, or TM names none and the text asks for UAT, so `lotusuat`.
+- `/ignitenx-tm:poll` can only be started by a person. The agent tried to start it itself, and the guard blocked
+  that as a failed step. So a routine or scheduled task can't start it either: its prompt should ask for the
+  `tpa_*` steps directly, not name `/ignitenx-tm:poll`.
+
 ## ignitenx-tm 0.2.1
 
 Copies Tenant Manager's redaction fix (learnteqs/ignitenx#5025, #5024, #5017), so the plugin replaces these secrets
